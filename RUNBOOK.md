@@ -154,14 +154,19 @@ for stability.
 3. If target is a group/channel, ensure OpenClaw can address it (allowlist and
 pairing policy as required by your channel config).
 
-## 14) Optional host tool alignment (Codex + VS Code)
+## 14) Optional host tool alignment (Codex + Claude + VS Code)
 ```bash
 # WSL Codex CLI
 npm install -g --prefix ~/.local @openai/codex@latest
 codex --version
 
+# WSL Claude CLI (stable)
+# If "claude install stable" hangs in this host/TTY, use npm update directly.
+npm install -g --prefix ~/.local @anthropic-ai/claude-code@latest
+claude -v
+npm view @anthropic-ai/claude-code version
+
 # VS Code extension from WSL
 "/mnt/c/Users/<WINDOWS_USER>/AppData/Local/Programs/Microsoft VS Code/bin/code" \
   --install-extension openai.chatgpt --force
 ```
-
