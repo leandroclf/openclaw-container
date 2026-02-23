@@ -67,3 +67,8 @@ See `AGENTS.md` for the full operational checklist and rules.
 
 ## Ops checklist
 See `CHECKLIST.md`.
+
+## Optional alerts
+- `./scripts/healthcheck_notify.sh` will send a Telegram alert if
+  `ALERT_TELEGRAM_TARGET` is set.
+- See `cron/cron.example` for sample scheduling.

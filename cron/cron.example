@@ -1,0 +1,7 @@
+# Example crontab entries (edit with: crontab -e)
+# Ensure cron is running in WSL if you choose to use this.
+#
+# Healthcheck every 15 minutes (optional Telegram alert)
+*/15 * * * * ALERT_TELEGRAM_TARGET=343551192 /home/leandro/openclaw-container/scripts/healthcheck_notify.sh >> /home/leandro/openclaw/logs/healthcheck.log 2>&1
+# Weekly backup (Sunday 03:00)
+0 3 * * 0 /home/leandro/openclaw-container/scripts/backup.sh >> /home/leandro/openclaw/logs/backup.log 2>&1

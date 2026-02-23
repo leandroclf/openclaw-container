@@ -14,3 +14,7 @@
 
 ## When OAuth expires
 - Re-run: `docker exec -it openclaw openclaw --profile prod onboard --auth-choice openai-codex`
+
+## Alerts (optional)
+- Use `scripts/healthcheck_notify.sh` with `ALERT_TELEGRAM_TARGET`.
+- Example crontab in `cron/cron.example`.
