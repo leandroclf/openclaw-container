@@ -57,3 +57,13 @@ tail -n 200 ~/openclaw/logs/openclaw-YYYY-MM-DD.log
 
 ## Operations guide
 See `AGENTS.md` for the full operational checklist and rules.
+
+## Scripts
+- `./scripts/update.sh` build + restart + health
+- `./scripts/restart.sh` restart + health
+- `./scripts/healthcheck.sh` health with retries
+- `./scripts/logs.sh` tail latest log (add `--follow`)
+- `./scripts/backup.sh` create a tarball backup (omit credentials by default)
+
+## Ops checklist
+See `CHECKLIST.md`.

@@ -97,3 +97,10 @@ docker run -d --name openclaw --restart unless-stopped \
 - Provide short summaries + next steps + risks.
 - Ask before destructive actions or production-impacting changes.
 - Mask secrets in any output.
+
+## Helper scripts
+- `./scripts/update.sh` build + restart + health
+- `./scripts/restart.sh` restart + health
+- `./scripts/healthcheck.sh` health with retries
+- `./scripts/logs.sh` tail latest log (add `--follow`)
+- `./scripts/backup.sh` backup core state (credentials excluded by default)
