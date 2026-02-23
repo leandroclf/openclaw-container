@@ -57,6 +57,7 @@ tail -n 200 ~/openclaw/logs/openclaw-YYYY-MM-DD.log
 
 ## Operations guide
 See `AGENTS.md` for the full operational checklist and rules.
+For full host replication (step-by-step), see `RUNBOOK.md`.
 
 ## Scripts
 - `./scripts/update.sh` build + restart + health
@@ -64,6 +65,7 @@ See `AGENTS.md` for the full operational checklist and rules.
 - `./scripts/healthcheck.sh` health with retries
 - `./scripts/logs.sh` tail latest log (add `--follow`)
 - `./scripts/backup.sh` create a tarball backup (omit credentials by default)
+- `./scripts/install_cron.sh` install/update OpenClaw cron block (idempotent)
 
 ## Ops checklist
 See `CHECKLIST.md`.

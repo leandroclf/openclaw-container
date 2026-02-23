@@ -1,7 +1,12 @@
-# Example crontab entries (edit with: crontab -e)
-# Ensure cron is running in WSL if you choose to use this.
+# Install with:
+#   /home/leandro/openclaw-container/scripts/install_cron.sh
 #
-# Healthcheck every 15 minutes (optional Telegram alert)
-*/15 * * * * ALERT_TELEGRAM_TARGET=343551192 /home/leandro/openclaw-container/scripts/healthcheck_notify.sh >> /home/leandro/openclaw/logs/healthcheck.log 2>&1
-# Weekly backup (Sunday 03:00)
+# Or add manually with the same block below.
+# Ensure cron is running in WSL:
+#   service cron status
+
+# === OpenClaw container ops ===
+*/15 * * * * . /home/leandro/openclaw/config/alerts.env && /home/leandro/openclaw-container/scripts/healthcheck_notify.sh >> /home/leandro/openclaw/logs/healthcheck.log 2>&1
 0 3 * * 0 /home/leandro/openclaw-container/scripts/backup.sh >> /home/leandro/openclaw/logs/backup.log 2>&1
+30 3 * * * /home/leandro/openclaw-container/scripts/update.sh >> /home/leandro/openclaw/logs/update.log 2>&1
+# === /OpenClaw container ops ===

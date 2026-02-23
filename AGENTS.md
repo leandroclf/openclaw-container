@@ -104,8 +104,12 @@ docker run -d --name openclaw --restart unless-stopped \
 - `./scripts/healthcheck.sh` health with retries
 - `./scripts/logs.sh` tail latest log (add `--follow`)
 - `./scripts/backup.sh` backup core state (credentials excluded by default)
+- `./scripts/install_cron.sh` install/update cron jobs idempotently
 
 ## Optional alerts
 - `./scripts/healthcheck_notify.sh` sends Telegram alerts if
   `ALERT_TELEGRAM_TARGET` is set.
 - Example cron entries in `cron/cron.example`.
+
+## Replication
+- Full host replication runbook: `RUNBOOK.md`

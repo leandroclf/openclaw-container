@@ -3,6 +3,7 @@
 ## Daily
 - Health: `./scripts/healthcheck.sh`
 - Logs: `./scripts/logs.sh`
+- Cron process: `service cron status`
 
 ## Weekly
 - Update image + restart: `./scripts/update.sh`
@@ -17,4 +18,8 @@
 
 ## Alerts (optional)
 - Use `scripts/healthcheck_notify.sh` with `ALERT_TELEGRAM_TARGET`.
+- Install cron block via `scripts/install_cron.sh`.
 - Example crontab in `cron/cron.example`.
+
+## Replication
+- Use `RUNBOOK.md` for full step-by-step setup on a new host.
