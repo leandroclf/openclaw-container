@@ -1,0 +1,169 @@
+{
+  "meta": {
+    "lastTouchedVersion": "2026.2.21-2",
+    "lastTouchedAt": "2026-02-23T00:25:47.199Z"
+  },
+  "wizard": {
+    "lastRunAt": "2026-02-22T22:35:27.183Z",
+    "lastRunVersion": "2026.2.21-2",
+    "lastRunCommand": "doctor",
+    "lastRunMode": "local"
+  },
+  "browser": {
+    "enabled": true,
+    "executablePath": "/usr/bin/chromium",
+    "headless": true,
+    "noSandbox": true
+  },
+  "auth": {
+    "profiles": {
+      "\"openai-codex:default\"": {
+        "provider": "openai-codex",
+        "mode": "oauth"
+      },
+      "\"anthropic:default\"": {
+        "provider": "anthropic",
+        "mode": "token"
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "openai-codex/gpt-5.3-codex",
+        "fallbacks": [
+          "anthropic/claude-opus-4-5",
+          "openai-codex/gpt-5.1-codex-max",
+          "openai-codex/gpt-5.2-codex",
+          "openai-codex/gpt-5.2"
+        ]
+      },
+      "models": {
+        "\"anthropic/claude-opus-4-5\"": {
+          "alias": "opus"
+        }
+      },
+      "workspace": "/home/node/clawd",
+      "contextPruning": {
+        "mode": "cache-ttl",
+        "ttl": "1h"
+      },
+      "compaction": {
+        "mode": "safeguard"
+      },
+      "elevatedDefault": "full",
+      "heartbeat": {
+        "every": "1h"
+      }
+    }
+  },
+  "tools": {
+    "web": {
+      "search": {
+        "enabled": true,
+        "apiKey": "<REDACTED>"
+      },
+      "fetch": {
+        "enabled": true
+      }
+    },
+    "elevated": {
+      "enabled": true,
+      "allowFrom": {
+        "telegram": [
+          343551192
+        ]
+      }
+    }
+  },
+  "commands": {
+    "native": "auto",
+    "nativeSkills": "auto",
+    "restart": true,
+    "ownerDisplay": "raw"
+  },
+  "hooks": {
+    "internal": {
+      "enabled": true,
+      "entries": {
+        "\"boot-md\"": {
+          "enabled": true
+        },
+        "\"command-logger\"": {
+          "enabled": true
+        },
+        "\"session-memory\"": {
+          "enabled": true
+        }
+      }
+    }
+  },
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "dmPolicy": "pairing",
+      "allowFrom": [
+        343551192
+      ],
+      "groupPolicy": "allowlist",
+      "streaming": false,
+      "botToken": "${TELEGRAM_BOT_TOKEN}"
+    }
+  },
+  "gateway": {
+    "port": 18789,
+    "mode": "local",
+    "bind": "loopback",
+    "auth": {
+      "mode": "token",
+      "token": "<REDACTED>"
+    },
+    "trustedProxies": [
+      "127.0.0.1",
+      "::1"
+    ],
+    "tailscale": {
+      "mode": "off",
+      "resetOnExit": false
+    }
+  },
+  "skills": {
+    "install": {
+      "nodeManager": "npm"
+    },
+    "entries": {
+      "1password": {
+        "enabled": false
+      },
+      "bird": {
+        "enabled": false
+      },
+      "bluebubbles": {
+        "enabled": false
+      },
+      "himalaya": {
+        "enabled": false
+      },
+      "oracle": {
+        "enabled": false
+      },
+      "openai-image-gen": {
+        "apiKey": "<REDACTED>"
+      },
+      "openai-whisper-api": {
+        "apiKey": "<REDACTED>"
+      },
+      "notion": {
+        "apiKey": "<REDACTED>"
+      }
+    }
+  },
+  "plugins": {
+    "enabled": true,
+    "entries": {
+      "telegram": {
+        "enabled": true
+      }
+    }
+  }
+}
