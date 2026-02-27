@@ -1,0 +1,69 @@
+version: "3.9"
+
+x-openclaw-common: &openclaw-common
+  image: ${OPENCLAW_IMAGE:-openclaw-secure:latest}
+  restart: unless-stopped
+  read_only: true
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  pids_limit: 512
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,size=256m
+  networks:
+    - openclaw_internal
+
+services:
+  openclaw-blue:
+    <<: *openclaw-common
+    profiles: ["blue"]
+    container_name: ${BLUE_CONTAINER_NAME:-openclaw}
+    env_file:
+      - ${BLUE_RUNTIME_ENV_FILE:-./empty.env}
+    volumes:
+      - ${BLUE_DATA_DIR:-/home/leandro/openclaw/data}:/home/node/.openclaw-prod
+      - ${BLUE_RUNTIME_DIR:-/home/leandro/openclaw/runtime}:/home/node/.openclaw
+      - ${BLUE_GEMINI_DIR:-/home/leandro/openclaw/runtime/gemini}:/home/node/.gemini
+      - ${BLUE_LOGS_DIR:-/home/leandro/openclaw/logs}:/tmp/openclaw
+      - ${BLUE_WORKSPACE_DIR:-/home/leandro/clawd}:/home/node/clawd
+    command: --profile prod gateway run --bind loopback --port ${BLUE_GATEWAY_PORT:-18789}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "openclaw --profile prod gateway health --url ws://127.0.0.1:${BLUE_GATEWAY_PORT:-18789} --token \"$$OPENCLAW_GATEWAY_TOKEN\" --timeout 5000 >/dev/null 2>&1 || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  openclaw-green:
+    <<: *openclaw-common
+    profiles: ["green"]
+    container_name: ${GREEN_CONTAINER_NAME:-openclaw-next}
+    env_file:
+      - ${GREEN_RUNTIME_ENV_FILE:-./empty.env}
+    volumes:
+      - ${GREEN_DATA_DIR:-/home/leandro/openclaw-next/data}:/home/node/.openclaw-prod
+      - ${GREEN_RUNTIME_DIR:-/home/leandro/openclaw-next/runtime}:/home/node/.openclaw
+      - ${GREEN_GEMINI_DIR:-/home/leandro/openclaw-next/runtime/gemini}:/home/node/.gemini
+      - ${GREEN_LOGS_DIR:-/home/leandro/openclaw-next/logs}:/tmp/openclaw
+      - ${GREEN_WORKSPACE_DIR:-/home/leandro/clawd-next}:/home/node/clawd
+    command: --profile prod gateway run --bind loopback --port ${GREEN_GATEWAY_PORT:-28789}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "openclaw --profile prod gateway health --url ws://127.0.0.1:${GREEN_GATEWAY_PORT:-28789} --token \"$$OPENCLAW_GATEWAY_TOKEN\" --timeout 5000 >/dev/null 2>&1 || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+networks:
+  openclaw_internal:
+    name: ${OPENCLAW_NETWORK_NAME:-openclaw_internal}
+    driver: bridge

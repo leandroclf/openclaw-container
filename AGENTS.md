@@ -11,6 +11,14 @@ hardening enabled, stable health, and clear operational procedures.
 - Never print secrets (tokens/keys). If logs show them, mask.
 - Do not remove containers unless explicitly needed to fix issues.
 - Keep gateway bind on loopback only.
+- Zero-downtime-first: production container `openclaw` must stay online while
+  validating changes in parallel (`openclaw-next`).
+- Never reuse production volumes for candidate validation.
+- Never reuse production workspace mount (`~/clawd`) for candidate validation;
+  use `~/clawd-next`.
+- Never run candidate and production with the same Telegram bot token.
+- Always verify Docker context before any `rm/stop/run`:
+  `docker context ls && docker context show`.
 
 ## Repo layout
 - Dockerfile lives at repo root: `/home/leandro/openclaw-container/Dockerfile`.
@@ -122,6 +130,8 @@ docker run -d --name openclaw --restart unless-stopped \
 - `./scripts/install_cron.sh` install/update cron jobs idempotently
 - `./scripts/model_router.py` objective-based model routing policy engine
 - `./scripts/model_route_apply.sh <objective>` apply routing + callbacks
+- `./scripts/test_gate.sh` run unit/regression tests (`--with-integration` for
+  docker guardrail tests)
 
 ## Optional alerts
 - `./scripts/healthcheck_notify.sh` sends Telegram alerts if
@@ -130,3 +140,10 @@ docker run -d --name openclaw --restart unless-stopped \
 
 ## Replication
 - Full host replication runbook: `RUNBOOK.md`
+
+## Change safety docs (mandatory)
+- Production guardrails: `docs/operations/PRODUCTION_CHANGE_POLICY.md`
+- Parallel deploy runbook: `docs/operations/BLUE_GREEN_WSL_DOCKER_DESKTOP.md`
+- Promotion/rollback gate: `docs/operations/PROMOTION_ROLLBACK_CHECKLIST.md`
+- Compose blue/green usage: `docs/operations/COMPOSE_BLUE_GREEN_USAGE.md`
+- Architecture phases: `docs/architecture/README.md`

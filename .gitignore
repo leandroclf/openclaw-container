@@ -14,3 +14,9 @@ ops/model-routing/last-recommendation.json
 
 # Python
 scripts/__pycache__/
+tests/**/__pycache__/
+*.pyc
+
+# Local compose envs
+compose/blue.env
+compose/green.env

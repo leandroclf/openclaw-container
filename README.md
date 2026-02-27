@@ -63,6 +63,14 @@ tail -n 200 ~/openclaw/logs/openclaw-YYYY-MM-DD.log
 ## Operations guide
 See `AGENTS.md` for the full operational checklist and rules.
 For full host replication (step-by-step), see `RUNBOOK.md`.
+For phased architecture evolution (no-downtime rollout), see
+`docs/architecture/README.md`.
+For strict production change guardrails and parallel deployment, see:
+- `docs/operations/PRODUCTION_CHANGE_POLICY.md`
+- `docs/operations/BLUE_GREEN_WSL_DOCKER_DESKTOP.md`
+- `docs/operations/TEST_STRATEGY.md`
+- `docs/operations/PROMOTION_ROLLBACK_CHECKLIST.md`
+- `docs/operations/COMPOSE_BLUE_GREEN_USAGE.md`
 
 ## Scripts
 - `./scripts/update.sh` build (latest stable) + restart + health
@@ -74,6 +82,15 @@ For full host replication (step-by-step), see `RUNBOOK.md`.
 - `./scripts/prune_logs.sh` compress/prune old logs
 - `./scripts/model_router.py` objective-based model routing (dry-run or apply)
 - `./scripts/model_route_apply.sh <objective>` apply routing + callbacks
+- `./scripts/test_gate.sh` run unit/regression tests (add
+  `--with-integration` for container guardrail checks)
+
+## Compose templates (blue/green)
+- Compose file: `compose/docker-compose.blue-green.yml`
+- Env templates:
+  - `compose/blue.env.example`
+  - `compose/green.env.example`
+- Safe usage guide: `docs/operations/COMPOSE_BLUE_GREEN_USAGE.md`
 
 ## Model routing (quality + cost strategy)
 Policy files live in `ops/model-routing/`.

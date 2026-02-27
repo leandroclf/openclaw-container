@@ -210,3 +210,41 @@ Suggested specialized objectives:
 - `reasoning_quality` for planning/architecture.
 - `research_depth` for synthesis and benchmarking.
 - `cost_optimized` for recurring automation and cron jobs.
+
+## 16) Zero-downtime upgrade path (mandatory for future changes)
+
+Do not apply risky changes directly on production container `openclaw`.
+Use parallel candidate validation with `openclaw-next`.
+Keep candidate workspace isolated in `~/clawd-next`.
+
+Reference docs:
+- `docs/operations/PRODUCTION_CHANGE_POLICY.md`
+- `docs/operations/BLUE_GREEN_WSL_DOCKER_DESKTOP.md`
+- `docs/operations/TEST_STRATEGY.md`
+
+Mandatory checks before any stop/rm/run command:
+```bash
+docker context ls
+docker context show
+docker ps --filter name=openclaw
+docker exec openclaw openclaw --profile prod gateway health
+```
+
+Only promote candidate after functional tests and soak window succeed.
+Run automated gates before promotion:
+```bash
+./scripts/test_gate.sh --with-integration
+```
+
+## 17) Optional compose blue/green templates
+
+Templates are available for controlled migration to compose-managed workflows:
+- `compose/docker-compose.blue-green.yml`
+- `compose/blue.env.example`
+- `compose/green.env.example`
+
+Usage and safety guide:
+- `docs/operations/COMPOSE_BLUE_GREEN_USAGE.md`
+
+Do not use compose `blue` profile on production unless migration is planned and
+rollback is ready.

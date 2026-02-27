@@ -17,6 +17,7 @@ RUN apt-get update -o Acquire::Retries=3 -o Acquire::http::Timeout=30 \
     cmake \
     build-essential \
     python3 \
+    python-is-python3 \
     pkg-config \
     chromium \
     fonts-liberation \
