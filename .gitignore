@@ -5,8 +5,12 @@
 
 # Logs
 *.log
+ops/model-routing/last-recommendation.json
 
 # OS/editor
 .DS_Store
 .vscode/
 .idea/
+
+# Python
+scripts/__pycache__/

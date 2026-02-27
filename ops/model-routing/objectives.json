@@ -1,0 +1,141 @@
+{
+  "metadata": {
+    "version": "2026-02-27",
+    "notes": [
+      "Weights should sum to 1.0.",
+      "Tune per business objective and token budget."
+    ]
+  },
+  "constraints": {
+    "ensureFallbackModels": [
+      "openai-codex/gpt-5.3-codex"
+    ],
+    "ensureFallbackPosition": "append"
+  },
+  "objectives": {
+    "balanced_default": {
+      "description": "Default daily mode with quality + cost balance.",
+      "fallbackCount": 3,
+      "requiredModalities": [
+        "text"
+      ],
+      "weights": {
+        "coding": 0.32,
+        "reasoning": 0.28,
+        "research": 0.2,
+        "latency": 0.1,
+        "cost_efficiency": 0.1
+      },
+      "callbacks": [
+        "docker exec {container} openclaw --profile {profile} models status",
+        "docker exec {container} openclaw --profile {profile} gateway health"
+      ]
+    },
+    "coding_quality": {
+      "description": "Highest coding quality with practical fallback chain.",
+      "fallbackCount": 3,
+      "requiredModalities": [
+        "text"
+      ],
+      "weights": {
+        "coding": 0.58,
+        "reasoning": 0.24,
+        "research": 0.1,
+        "latency": 0.04,
+        "cost_efficiency": 0.04
+      },
+      "callbacks": [
+        "docker exec {container} openclaw --profile {profile} models status --probe --probe-provider openai-codex --probe-timeout 12000 --probe-max-tokens 64",
+        "docker exec {container} openclaw --profile {profile} gateway health"
+      ]
+    },
+    "reasoning_quality": {
+      "description": "Complex analysis, planning, and deep reasoning.",
+      "fallbackCount": 3,
+      "requiredModalities": [
+        "text"
+      ],
+      "weights": {
+        "reasoning": 0.58,
+        "coding": 0.16,
+        "research": 0.16,
+        "latency": 0.05,
+        "cost_efficiency": 0.05
+      },
+      "callbacks": [
+        "docker exec {container} openclaw --profile {profile} models status --probe --probe-provider anthropic --probe-timeout 12000 --probe-max-tokens 64",
+        "docker exec {container} openclaw --profile {profile} gateway health"
+      ]
+    },
+    "research_depth": {
+      "description": "Research-heavy tasks with synthesis quality priority.",
+      "fallbackCount": 3,
+      "requiredModalities": [
+        "text"
+      ],
+      "weights": {
+        "research": 0.5,
+        "reasoning": 0.25,
+        "coding": 0.1,
+        "latency": 0.07,
+        "cost_efficiency": 0.08
+      },
+      "callbacks": [
+        "docker exec {container} openclaw --profile {profile} models status --probe --probe-provider google-gemini-cli --probe-timeout 12000 --probe-max-tokens 64",
+        "docker exec {container} openclaw --profile {profile} gateway health"
+      ]
+    },
+    "cost_optimized": {
+      "description": "Best cost-benefit for routine operations and cron tasks.",
+      "fallbackCount": 3,
+      "requiredModalities": [
+        "text"
+      ],
+      "weights": {
+        "cost_efficiency": 0.45,
+        "latency": 0.25,
+        "coding": 0.15,
+        "reasoning": 0.1,
+        "research": 0.05
+      },
+      "callbacks": [
+        "docker exec {container} openclaw --profile {profile} models status",
+        "docker exec {container} openclaw --profile {profile} gateway health"
+      ]
+    },
+    "image_creator": {
+      "description": "Image-oriented requests with multimodal bias.",
+      "fallbackCount": 3,
+      "requiredModalities": [
+        "image"
+      ],
+      "weights": {
+        "image": 0.55,
+        "reasoning": 0.15,
+        "research": 0.1,
+        "latency": 0.1,
+        "cost_efficiency": 0.1
+      },
+      "callbacks": [
+        "docker exec {container} openclaw --profile {profile} models status"
+      ]
+    },
+    "video_creator": {
+      "description": "Video-oriented requests when video-capable models are available.",
+      "fallbackCount": 3,
+      "requiredModalities": [
+        "video"
+      ],
+      "weights": {
+        "video": 0.6,
+        "reasoning": 0.1,
+        "research": 0.1,
+        "latency": 0.1,
+        "cost_efficiency": 0.1
+      },
+      "callbacks": [
+        "docker exec {container} openclaw --profile {profile} models status"
+      ]
+    }
+  }
+}

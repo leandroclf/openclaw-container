@@ -131,6 +131,7 @@ Installed schedules:
 - `*/15 * * * *` healthcheck + optional Telegram alert.
 - `0 3 * * 0` weekly backup.
 - `30 3 * * *` daily rebuild/restart/update.
+- `45 3 * * *` daily model routing refresh (`balanced_default`).
 - `15 4 * * *` log pruning/compression.
 
 To avoid duplicated health routines between WSL cron and OpenClaw internal
@@ -185,3 +186,25 @@ npm view @anthropic-ai/claude-code version
 "/mnt/c/Users/<WINDOWS_USER>/AppData/Local/Programs/Microsoft VS Code/bin/code" \
   --install-extension openai.chatgpt --force
 ```
+
+## 15) Objective-based model routing (quality + cost)
+Routing policy and scores:
+- `ops/model-routing/model_catalog.json`
+- `ops/model-routing/objectives.json`
+
+Commands:
+```bash
+cd ~/openclaw-container
+./scripts/model_router.py --list-objectives
+./scripts/model_router.py --objective balanced_default
+./scripts/model_router.py --objective coding_quality --apply --run-callbacks
+```
+
+Suggested default objective:
+- `balanced_default` for daily operation.
+
+Suggested specialized objectives:
+- `coding_quality` for deep implementation/debug.
+- `reasoning_quality` for planning/architecture.
+- `research_depth` for synthesis and benchmarking.
+- `cost_optimized` for recurring automation and cron jobs.

@@ -72,6 +72,18 @@ For full host replication (step-by-step), see `RUNBOOK.md`.
 - `./scripts/backup.sh` create a tarball backup (fails hard on errors)
 - `./scripts/install_cron.sh` install/update OpenClaw cron block (idempotent)
 - `./scripts/prune_logs.sh` compress/prune old logs
+- `./scripts/model_router.py` objective-based model routing (dry-run or apply)
+- `./scripts/model_route_apply.sh <objective>` apply routing + callbacks
+
+## Model routing (quality + cost strategy)
+Policy files live in `ops/model-routing/`.
+
+Quick examples:
+```bash
+./scripts/model_router.py --list-objectives
+./scripts/model_router.py --objective balanced_default
+./scripts/model_router.py --objective coding_quality --apply --run-callbacks
+```
 
 ## Ops checklist
 See `CHECKLIST.md`.

@@ -120,6 +120,8 @@ docker run -d --name openclaw --restart unless-stopped \
 - `./scripts/backup.sh` backup core state (credentials excluded by default)
 - `./scripts/prune_logs.sh` compress/prune old logs
 - `./scripts/install_cron.sh` install/update cron jobs idempotently
+- `./scripts/model_router.py` objective-based model routing policy engine
+- `./scripts/model_route_apply.sh <objective>` apply routing + callbacks
 
 ## Optional alerts
 - `./scripts/healthcheck_notify.sh` sends Telegram alerts if

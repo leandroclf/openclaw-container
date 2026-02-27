@@ -13,6 +13,7 @@ RUN apt-get update -o Acquire::Retries=3 -o Acquire::http::Timeout=30 \
     ca-certificates \
     curl \
     git \
+    gh \
     cmake \
     build-essential \
     python3 \

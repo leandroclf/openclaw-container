@@ -1,0 +1,140 @@
+{
+  "metadata": {
+    "version": "2026-02-27",
+    "scoringScale": "0-100 (higher is better)",
+    "notes": [
+      "Scores are policy inputs, not hard truth.",
+      "Refresh monthly using public benchmarks and provider pricing pages."
+    ],
+    "sourceRefs": [
+      "OpenClaw models status/list output",
+      "SWE-bench (coding)",
+      "LiveCodeBench (coding)",
+      "LiveBench (reasoning/research)",
+      "GenEval (image)",
+      "VBench / VBench-2.0 (video)",
+      "Official provider pricing pages (cost efficiency)"
+    ]
+  },
+  "models": {
+    "openai-codex/gpt-5.3-codex": {
+      "provider": "openai-codex",
+      "modalities": {
+        "text": true,
+        "image": true,
+        "video": false
+      },
+      "scores": {
+        "coding": 96,
+        "reasoning": 90,
+        "research": 84,
+        "image": 65,
+        "video": 20,
+        "latency": 55,
+        "cost_efficiency": 35
+      }
+    },
+    "anthropic/claude-opus-4-5": {
+      "provider": "anthropic",
+      "modalities": {
+        "text": true,
+        "image": true,
+        "video": false
+      },
+      "scores": {
+        "coding": 91,
+        "reasoning": 95,
+        "research": 92,
+        "image": 72,
+        "video": 25,
+        "latency": 45,
+        "cost_efficiency": 20
+      }
+    },
+    "anthropic/claude-sonnet-4-5": {
+      "provider": "anthropic",
+      "modalities": {
+        "text": true,
+        "image": true,
+        "video": false
+      },
+      "scores": {
+        "coding": 89,
+        "reasoning": 90,
+        "research": 88,
+        "image": 70,
+        "video": 25,
+        "latency": 58,
+        "cost_efficiency": 55
+      }
+    },
+    "anthropic/claude-haiku-4-5": {
+      "provider": "anthropic",
+      "modalities": {
+        "text": true,
+        "image": true,
+        "video": false
+      },
+      "scores": {
+        "coding": 78,
+        "reasoning": 76,
+        "research": 74,
+        "image": 60,
+        "video": 20,
+        "latency": 90,
+        "cost_efficiency": 88
+      }
+    },
+    "anthropic/claude-3-5-haiku-latest": {
+      "provider": "anthropic",
+      "modalities": {
+        "text": true,
+        "image": true,
+        "video": false
+      },
+      "scores": {
+        "coding": 72,
+        "reasoning": 70,
+        "research": 69,
+        "image": 55,
+        "video": 20,
+        "latency": 92,
+        "cost_efficiency": 92
+      }
+    },
+    "google-gemini-cli/gemini-2.5-pro": {
+      "provider": "google-gemini-cli",
+      "modalities": {
+        "text": true,
+        "image": true,
+        "video": true
+      },
+      "scores": {
+        "coding": 90,
+        "reasoning": 91,
+        "research": 90,
+        "image": 74,
+        "video": 35,
+        "latency": 50,
+        "cost_efficiency": 60
+      }
+    },
+    "google-gemini-cli/gemini-2.5-flash": {
+      "provider": "google-gemini-cli",
+      "modalities": {
+        "text": true,
+        "image": true,
+        "video": true
+      },
+      "scores": {
+        "coding": 83,
+        "reasoning": 82,
+        "research": 84,
+        "image": 70,
+        "video": 30,
+        "latency": 88,
+        "cost_efficiency": 95
+      }
+    }
+  }
+}
