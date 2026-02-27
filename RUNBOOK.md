@@ -80,7 +80,8 @@ docker exec openclaw openclaw --profile prod config set channels.telegram.dmPoli
 docker exec openclaw openclaw --profile prod config set channels.telegram.groupPolicy allowlist
 docker exec openclaw openclaw --profile prod config set channels.telegram.allowFrom '[343551192]'
 docker exec openclaw openclaw --profile prod config set channels.telegram.botToken '${TELEGRAM_BOT_TOKEN}'
-docker exec openclaw openclaw --profile prod config set agents.defaults.model.primary openai-codex/gpt-5.3-codex
+docker exec openclaw openclaw --profile prod config set agents.defaults.model.primary google-gemini-cli/gemini-2.5-flash
+docker exec openclaw openclaw --profile prod config set agents.defaults.model.fallbacks '["google-gemini-cli/gemini-2.5-pro","anthropic/claude-haiku-4-5","anthropic/claude-sonnet-4-5","openai-codex/gpt-5.3-codex"]'
 ```
 
 ## 8) Configure OpenAI Codex OAuth

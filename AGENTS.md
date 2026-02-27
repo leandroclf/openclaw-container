@@ -63,7 +63,12 @@ docker run -d --name openclaw --restart unless-stopped \
 - `channels.telegram.dmPolicy = pairing`
 - `channels.telegram.groupPolicy = allowlist`
 - `channels.telegram.allowFrom = [343551192]`
-- Default model: `openai-codex/gpt-5.3-codex`
+- Default model chain:
+  - `google-gemini-cli/gemini-2.5-flash` (primary)
+  - `google-gemini-cli/gemini-2.5-pro`
+  - `anthropic/claude-haiku-4-5`
+  - `anthropic/claude-sonnet-4-5`
+  - `openai-codex/gpt-5.3-codex`
 
 ## Secrets policy
 - All secrets live in `~/openclaw/.env` (chmod 600). Do not print.

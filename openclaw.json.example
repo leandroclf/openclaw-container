@@ -1,14 +1,4 @@
 {
-  "meta": {
-    "lastTouchedVersion": "2026.2.21-2",
-    "lastTouchedAt": "2026-02-23T00:25:47.199Z"
-  },
-  "wizard": {
-    "lastRunAt": "2026-02-22T22:35:27.183Z",
-    "lastRunVersion": "2026.2.21-2",
-    "lastRunCommand": "doctor",
-    "lastRunMode": "local"
-  },
   "browser": {
     "enabled": true,
     "executablePath": "/usr/bin/chromium",
@@ -17,11 +7,11 @@
   },
   "auth": {
     "profiles": {
-      "\"openai-codex:default\"": {
+      "openai-codex:default": {
         "provider": "openai-codex",
         "mode": "oauth"
       },
-      "\"anthropic:default\"": {
+      "anthropic:manual": {
         "provider": "anthropic",
         "mode": "token"
       }
@@ -30,18 +20,13 @@
   "agents": {
     "defaults": {
       "model": {
-        "primary": "openai-codex/gpt-5.3-codex",
+        "primary": "google-gemini-cli/gemini-2.5-flash",
         "fallbacks": [
-          "anthropic/claude-opus-4-5",
-          "openai-codex/gpt-5.1-codex-max",
-          "openai-codex/gpt-5.2-codex",
-          "openai-codex/gpt-5.2"
+          "google-gemini-cli/gemini-2.5-pro",
+          "anthropic/claude-haiku-4-5",
+          "anthropic/claude-sonnet-4-5",
+          "openai-codex/gpt-5.3-codex"
         ]
-      },
-      "models": {
-        "\"anthropic/claude-opus-4-5\"": {
-          "alias": "opus"
-        }
       },
       "workspace": "/home/node/clawd",
       "contextPruning": {
@@ -61,7 +46,7 @@
     "web": {
       "search": {
         "enabled": true,
-        "apiKey": "<REDACTED>"
+        "apiKey": "${BRAVE_API_KEY}"
       },
       "fetch": {
         "enabled": true
@@ -86,13 +71,13 @@
     "internal": {
       "enabled": true,
       "entries": {
-        "\"boot-md\"": {
+        "boot-md": {
           "enabled": true
         },
-        "\"command-logger\"": {
+        "command-logger": {
           "enabled": true
         },
-        "\"session-memory\"": {
+        "session-memory": {
           "enabled": true
         }
       }
@@ -102,11 +87,11 @@
     "telegram": {
       "enabled": true,
       "dmPolicy": "pairing",
+      "groupPolicy": "allowlist",
       "allowFrom": [
         343551192
       ],
-      "groupPolicy": "allowlist",
-      "streaming": false,
+      "streaming": "off",
       "botToken": "${TELEGRAM_BOT_TOKEN}"
     }
   },
@@ -116,7 +101,7 @@
     "bind": "loopback",
     "auth": {
       "mode": "token",
-      "token": "<REDACTED>"
+      "token": "${OPENCLAW_GATEWAY_TOKEN}"
     },
     "trustedProxies": [
       "127.0.0.1",
@@ -132,29 +117,14 @@
       "nodeManager": "npm"
     },
     "entries": {
-      "1password": {
-        "enabled": false
-      },
-      "bird": {
-        "enabled": false
-      },
-      "bluebubbles": {
-        "enabled": false
-      },
-      "himalaya": {
-        "enabled": false
-      },
-      "oracle": {
-        "enabled": false
-      },
       "openai-image-gen": {
-        "apiKey": "<REDACTED>"
+        "apiKey": "${OPENAI_IMAGE_GEN_API_KEY}"
       },
       "openai-whisper-api": {
-        "apiKey": "<REDACTED>"
+        "apiKey": "${OPENAI_WHISPER_API_KEY}"
       },
       "notion": {
-        "apiKey": "<REDACTED>"
+        "apiKey": "${NOTION_API_KEY}"
       }
     }
   },
@@ -162,6 +132,9 @@
     "enabled": true,
     "entries": {
       "telegram": {
+        "enabled": true
+      },
+      "google-gemini-cli-auth": {
         "enabled": true
       }
     }
