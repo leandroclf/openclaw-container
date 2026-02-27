@@ -32,6 +32,8 @@ docker rm -f openclaw 2>/dev/null || true
 docker run -d --name openclaw --restart unless-stopped \
   --env-file ~/openclaw/.env \
   --read-only --cap-drop ALL \
+  --security-opt no-new-privileges \
+  --pids-limit 512 \
   --tmpfs /tmp:rw,noexec,nosuid,size=256m \
   -v ~/openclaw/data:/home/node/.openclaw-prod \
   -v ~/openclaw/runtime:/home/node/.openclaw \
@@ -66,7 +68,6 @@ docker run -d --name openclaw --restart unless-stopped \
 - Default model chain:
   - `google-gemini-cli/gemini-2.5-flash` (primary)
   - `google-gemini-cli/gemini-2.5-pro`
-  - `anthropic/claude-haiku-4-5`
   - `anthropic/claude-sonnet-4-5`
   - `openai-codex/gpt-5.3-codex`
 
@@ -79,6 +80,9 @@ docker run -d --name openclaw --restart unless-stopped \
   - `OPENAI_IMAGE_GEN_API_KEY`
   - `OPENAI_WHISPER_API_KEY`
   - `NOTION_API_KEY`
+- Optional env keys (feature-dependent):
+  - `OPENAI_API_KEY` (memory embeddings provider)
+  - `GH_TOKEN` / `GITHUB_TOKEN` (GitHub API access in skills/automations)
 - Config uses `${VAR_NAME}` placeholders for those secrets.
 
 ## OAuth (OpenAI Codex)
@@ -97,6 +101,9 @@ docker run -d --name openclaw --restart unless-stopped \
 - If unauthorized `device_token_mismatch`, ensure gateway token is provided
   via env and config placeholder `${OPENCLAW_GATEWAY_TOKEN}`.
 - If container fails, inspect `/tmp/openclaw/openclaw-*.log` (persisted).
+- Avoid duplicate health schedulers: keep WSL cron as source of truth for
+  container health/backup/update and disable overlapping OpenClaw internal
+  healthcheck jobs when needed.
 
 ## Interaction style for Codex
 - Provide short summaries + next steps + risks.
@@ -104,11 +111,12 @@ docker run -d --name openclaw --restart unless-stopped \
 - Mask secrets in any output.
 
 ## Helper scripts
-- `./scripts/update.sh` build + restart + health
+- `./scripts/update.sh` build (latest stable) + restart + health
 - `./scripts/restart.sh` restart + health
-- `./scripts/healthcheck.sh` health with retries
+- `./scripts/healthcheck.sh` gateway health + channel probe with retries
 - `./scripts/logs.sh` tail latest log (add `--follow`)
 - `./scripts/backup.sh` backup core state (credentials excluded by default)
+- `./scripts/prune_logs.sh` compress/prune old logs
 - `./scripts/install_cron.sh` install/update cron jobs idempotently
 
 ## Optional alerts

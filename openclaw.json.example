@@ -23,7 +23,6 @@
         "primary": "google-gemini-cli/gemini-2.5-flash",
         "fallbacks": [
           "google-gemini-cli/gemini-2.5-pro",
-          "anthropic/claude-haiku-4-5",
           "anthropic/claude-sonnet-4-5",
           "openai-codex/gpt-5.3-codex"
         ]

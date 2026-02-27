@@ -8,6 +8,7 @@ ALERTS_FILE="${ALERTS_FILE:-$OPENCLAW_HOME/config/alerts.env}"
 HEALTH_SCHEDULE="${HEALTH_SCHEDULE:-*/15 * * * *}"
 BACKUP_SCHEDULE="${BACKUP_SCHEDULE:-0 3 * * 0}"
 UPDATE_SCHEDULE="${UPDATE_SCHEDULE:-30 3 * * *}"
+PRUNE_LOGS_SCHEDULE="${PRUNE_LOGS_SCHEDULE:-15 4 * * *}"
 
 mkdir -p "$OPENCLAW_HOME/config" "$OPENCLAW_HOME/logs"
 
@@ -31,6 +32,7 @@ cat >> "$tmp" <<EOF
 $HEALTH_SCHEDULE . $ALERTS_FILE && $ROOT_DIR/scripts/healthcheck_notify.sh >> $OPENCLAW_HOME/logs/healthcheck.log 2>&1
 $BACKUP_SCHEDULE $ROOT_DIR/scripts/backup.sh >> $OPENCLAW_HOME/logs/backup.log 2>&1
 $UPDATE_SCHEDULE $ROOT_DIR/scripts/update.sh >> $OPENCLAW_HOME/logs/update.log 2>&1
+$PRUNE_LOGS_SCHEDULE $ROOT_DIR/scripts/prune_logs.sh >> $OPENCLAW_HOME/logs/prune.log 2>&1
 # === /OpenClaw container ops ===
 EOF
 

@@ -16,9 +16,12 @@ if [ "$INCLUDE_CREDENTIALS" -ne 1 ]; then
 fi
 
 # Backup core state; logs are omitted by default
- tar -czf "$backup_file" "${excludes[@]}" \
+if tar -czf "$backup_file" "${excludes[@]}" \
   "$OPENCLAW_HOME/data" \
   "$OPENCLAW_HOME/runtime" \
-  "$OPENCLAW_HOME/config" 2>/dev/null || true
-
-echo "Backup created: $backup_file"
+  "$OPENCLAW_HOME/config"; then
+  echo "Backup created: $backup_file"
+else
+  echo "Backup failed: $backup_file" >&2
+  exit 1
+fi

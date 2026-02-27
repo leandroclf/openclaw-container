@@ -41,11 +41,12 @@ Fill `~/openclaw/.env` with real values (never commit this file):
 - `OPENAI_IMAGE_GEN_API_KEY`
 - `OPENAI_WHISPER_API_KEY`
 - `NOTION_API_KEY`
+- Optional (feature-dependent): `OPENAI_API_KEY`, `GH_TOKEN`, `GITHUB_TOKEN`
 
 ## 5) Build and validate image (legacy builder only)
 ```bash
 cd ~/openclaw-container
-DOCKER_BUILDKIT=0 docker build -t openclaw-secure:latest .
+DOCKER_BUILDKIT=0 docker build --build-arg OPENCLAW_VERSION=latest -t openclaw-secure:latest .
 docker images | rg openclaw-secure
 docker run --rm openclaw-secure --version
 docker run --rm openclaw-secure gateway --help
@@ -57,6 +58,8 @@ docker rm -f openclaw 2>/dev/null || true
 docker run -d --name openclaw --restart unless-stopped \
   --env-file ~/openclaw/.env \
   --read-only --cap-drop ALL \
+  --security-opt no-new-privileges \
+  --pids-limit 512 \
   --tmpfs /tmp:rw,noexec,nosuid,size=256m \
   -v ~/openclaw/data:/home/node/.openclaw-prod \
   -v ~/openclaw/runtime:/home/node/.openclaw \
@@ -81,7 +84,7 @@ docker exec openclaw openclaw --profile prod config set channels.telegram.groupP
 docker exec openclaw openclaw --profile prod config set channels.telegram.allowFrom '[343551192]'
 docker exec openclaw openclaw --profile prod config set channels.telegram.botToken '${TELEGRAM_BOT_TOKEN}'
 docker exec openclaw openclaw --profile prod config set agents.defaults.model.primary google-gemini-cli/gemini-2.5-flash
-docker exec openclaw openclaw --profile prod config set agents.defaults.model.fallbacks '["google-gemini-cli/gemini-2.5-pro","anthropic/claude-haiku-4-5","anthropic/claude-sonnet-4-5","openai-codex/gpt-5.3-codex"]'
+docker exec openclaw openclaw --profile prod config set agents.defaults.model.fallbacks '["google-gemini-cli/gemini-2.5-pro","anthropic/claude-sonnet-4-5","openai-codex/gpt-5.3-codex"]'
 ```
 
 ## 8) Configure OpenAI Codex OAuth
@@ -126,6 +129,14 @@ Installed schedules:
 - `*/15 * * * *` healthcheck + optional Telegram alert.
 - `0 3 * * 0` weekly backup.
 - `30 3 * * *` daily rebuild/restart/update.
+- `15 4 * * *` log pruning/compression.
+
+To avoid duplicated health routines between WSL cron and OpenClaw internal
+scheduler, disable the two internal health jobs once:
+```bash
+docker exec openclaw openclaw --profile prod cron disable f257b81c-d28b-48b5-af72-e02512f99cfb
+docker exec openclaw openclaw --profile prod cron disable 32a75901-b0b1-4b72-8153-12a9e44beee9
+```
 
 ## 11) Verification commands
 ```bash
@@ -136,7 +147,8 @@ tail -n 200 ~/openclaw/logs/openclaw-$(date +%F).log
 ```
 
 ## 12) Stable update policy
-- `scripts/update.sh` always builds using `openclaw@latest` from Dockerfile.
+- `scripts/update.sh` resolves the newest `openclaw` npm stable version and
+  passes it as `OPENCLAW_VERSION` build arg.
 - `latest` is the stable channel.
 - To check tags:
 ```bash

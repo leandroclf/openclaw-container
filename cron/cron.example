@@ -9,4 +9,5 @@
 */15 * * * * . /home/leandro/openclaw/config/alerts.env && /home/leandro/openclaw-container/scripts/healthcheck_notify.sh >> /home/leandro/openclaw/logs/healthcheck.log 2>&1
 0 3 * * 0 /home/leandro/openclaw-container/scripts/backup.sh >> /home/leandro/openclaw/logs/backup.log 2>&1
 30 3 * * * /home/leandro/openclaw-container/scripts/update.sh >> /home/leandro/openclaw/logs/update.log 2>&1
+15 4 * * * /home/leandro/openclaw-container/scripts/prune_logs.sh >> /home/leandro/openclaw/logs/prune.log 2>&1
 # === /OpenClaw container ops ===

@@ -1,13 +1,14 @@
 # OpenClaw Ops Checklist
 
 ## Daily
-- Health: `./scripts/healthcheck.sh`
+- Health + channel probe: `./scripts/healthcheck.sh`
 - Logs: `./scripts/logs.sh`
 - Cron process: `service cron status`
 
 ## Weekly
 - Update image + restart: `./scripts/update.sh`
 - Backup state: `./scripts/backup.sh`
+- Prune/compress logs: `./scripts/prune_logs.sh`
 
 ## After changes
 - `docker exec openclaw openclaw --profile prod status`

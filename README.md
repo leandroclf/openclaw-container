@@ -7,7 +7,7 @@ running OpenClaw 24/7 inside WSL (Ubuntu-24.04).
 
 ### 1) Build the image (legacy builder only)
 ```bash
-DOCKER_BUILDKIT=0 docker build -t openclaw-secure:latest .
+DOCKER_BUILDKIT=0 docker build --build-arg OPENCLAW_VERSION=latest -t openclaw-secure:latest .
 ```
 
 ### 2) Prepare folders
@@ -24,6 +24,8 @@ docker rm -f openclaw 2>/dev/null || true
 docker run -d --name openclaw --restart unless-stopped \
   --env-file ~/openclaw/.env \
   --read-only --cap-drop ALL \
+  --security-opt no-new-privileges \
+  --pids-limit 512 \
   --tmpfs /tmp:rw,noexec,nosuid,size=256m \
   -v ~/openclaw/data:/home/node/.openclaw-prod \
   -v ~/openclaw/runtime:/home/node/.openclaw \
@@ -41,6 +43,7 @@ If you see a 1006 error immediately after restart, wait 5-10 seconds and retry.
 ## Secrets
 - Use `~/openclaw/.env` for all secrets.
 - See `.env.example` for required keys.
+- Optional keys for advanced features: `OPENAI_API_KEY`, `GH_TOKEN`, `GITHUB_TOKEN`.
 - Config uses `${VAR_NAME}` placeholders (see `openclaw.json.example`).
 
 ## OAuth (OpenAI Codex)
@@ -60,12 +63,13 @@ See `AGENTS.md` for the full operational checklist and rules.
 For full host replication (step-by-step), see `RUNBOOK.md`.
 
 ## Scripts
-- `./scripts/update.sh` build + restart + health
+- `./scripts/update.sh` build (latest stable) + restart + health
 - `./scripts/restart.sh` restart + health
-- `./scripts/healthcheck.sh` health with retries
+- `./scripts/healthcheck.sh` gateway health + channel probe with retries
 - `./scripts/logs.sh` tail latest log (add `--follow`)
-- `./scripts/backup.sh` create a tarball backup (omit credentials by default)
+- `./scripts/backup.sh` create a tarball backup (fails hard on errors)
 - `./scripts/install_cron.sh` install/update OpenClaw cron block (idempotent)
+- `./scripts/prune_logs.sh` compress/prune old logs
 
 ## Ops checklist
 See `CHECKLIST.md`.

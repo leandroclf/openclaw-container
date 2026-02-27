@@ -12,4 +12,7 @@ echo "== gateway health =="
 "$ROOT_DIR/scripts/healthcheck.sh"
 
 echo "== openclaw status =="
-docker exec "$CONTAINER" openclaw --profile "$PROFILE" status
+docker exec "$CONTAINER" openclaw --profile "$PROFILE" status --deep
+
+echo "== channel probes =="
+docker exec "$CONTAINER" openclaw --profile "$PROFILE" channels status --probe

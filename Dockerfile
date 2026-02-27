@@ -3,6 +3,9 @@ FROM node:22-bookworm
 # (opcional, mas recomendado pelo OpenClaw quando houver tretas com sharp/libvips)
 ENV SHARP_IGNORE_GLOBAL_LIBVIPS=1
 
+# Allow deterministic upgrades by pinning the OpenClaw npm version at build time.
+ARG OPENCLAW_VERSION=latest
+
 # Dependências para o node-llama-cpp conseguir compilar o llama.cpp quando não houver binário compatível
 RUN apt-get update -o Acquire::Retries=3 -o Acquire::http::Timeout=30 \
  && apt-get install -y --no-install-recommends \
@@ -19,7 +22,7 @@ RUN apt-get update -o Acquire::Retries=3 -o Acquire::http::Timeout=30 \
  && rm -rf /var/lib/apt/lists/*
 
 # Instala o OpenClaw
-RUN npm install -g openclaw@latest
+RUN npm install -g "openclaw@${OPENCLAW_VERSION}"
 
 # Rodar como usuário não-root (boa prática)
 USER node
