@@ -131,7 +131,9 @@ Installed schedules:
 - `*/15 * * * *` healthcheck + optional Telegram alert.
 - `0 3 * * 0` weekly backup.
 - `30 3 * * *` daily rebuild/restart/update.
-- `45 3 * * *` daily model routing refresh (`balanced_default`).
+- `45 3 * * *` model routing baseline (`balanced_default`) after update.
+- `5 8 * * 1-5` model routing for business hours (`coding_quality`).
+- `5 20 * * *` model routing for off-hours (`cost_optimized`).
 - `15 4 * * *` log pruning/compression.
 
 To avoid duplicated health routines between WSL cron and OpenClaw internal

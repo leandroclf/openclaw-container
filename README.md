@@ -85,6 +85,11 @@ Quick examples:
 ./scripts/model_router.py --objective coding_quality --apply --run-callbacks
 ```
 
+`./scripts/install_cron.sh` applies three automatic routing windows:
+- baseline after daily update (`balanced_default`)
+- business hours (`coding_quality`)
+- off-hours (`cost_optimized`)
+
 ## Ops checklist
 See `CHECKLIST.md`.
 
