@@ -13,6 +13,7 @@ DOCKER_BUILDKIT=0 docker build --build-arg OPENCLAW_VERSION=latest -t openclaw-s
 ### 2) Prepare folders
 ```bash
 mkdir -p ~/openclaw/{data,logs,config,runtime}
+mkdir -p ~/openclaw/runtime/gemini
 mkdir -p ~/clawd
 chmod 700 ~/openclaw ~/openclaw/data ~/openclaw/runtime
 chmod 600 ~/openclaw/.env
@@ -29,6 +30,7 @@ docker run -d --name openclaw --restart unless-stopped \
   --tmpfs /tmp:rw,noexec,nosuid,size=256m \
   -v ~/openclaw/data:/home/node/.openclaw-prod \
   -v ~/openclaw/runtime:/home/node/.openclaw \
+  -v ~/openclaw/runtime/gemini:/home/node/.gemini \
   -v ~/openclaw/logs:/tmp/openclaw \
   -v ~/clawd:/home/node/clawd \
   openclaw-secure --profile prod gateway run --bind loopback --port 18789

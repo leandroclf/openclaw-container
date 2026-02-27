@@ -16,6 +16,7 @@ hardening enabled, stable health, and clear operational procedures.
 - Dockerfile lives at repo root: `/home/leandro/openclaw-container/Dockerfile`.
 - Data volume: `~/openclaw/data` -> `/home/node/.openclaw-prod`
 - Runtime volume (cron): `~/openclaw/runtime` -> `/home/node/.openclaw`
+- Gemini runtime dir: `~/openclaw/runtime/gemini` -> `/home/node/.gemini`
 - Logs: `~/openclaw/logs` -> `/tmp/openclaw`
 - Workspace: `~/clawd` -> `/home/node/clawd`
 
@@ -37,6 +38,7 @@ docker run -d --name openclaw --restart unless-stopped \
   --tmpfs /tmp:rw,noexec,nosuid,size=256m \
   -v ~/openclaw/data:/home/node/.openclaw-prod \
   -v ~/openclaw/runtime:/home/node/.openclaw \
+  -v ~/openclaw/runtime/gemini:/home/node/.gemini \
   -v ~/openclaw/logs:/tmp/openclaw \
   -v ~/clawd:/home/node/clawd \
   openclaw-secure --profile prod gateway run --bind loopback --port 18789
