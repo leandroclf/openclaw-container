@@ -5,6 +5,13 @@
     "headless": true,
     "noSandbox": true
   },
+  "env": {
+    "vars": {
+      "OPENAI_API_KEY": "${OPENAI_API_KEY}",
+      "GH_TOKEN": "${GH_TOKEN}",
+      "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+    }
+  },
   "auth": {
     "profiles": {
       "openai-codex:default": {
