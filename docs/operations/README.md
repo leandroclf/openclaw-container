@@ -16,6 +16,8 @@ while evolving infrastructure.
   - Step-by-step promotion and rollback checklist for blue/green.
 - `COMPOSE_BLUE_GREEN_USAGE.md`
   - Safe usage of compose templates for candidate and optional full migration.
+- `VALIDATION_EVIDENCE_2026-02-28.md`
+  - Executed command evidence for post-promotion validation and runtime fixes.
 
 ## Usage order
 

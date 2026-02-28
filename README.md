@@ -71,6 +71,7 @@ For strict production change guardrails and parallel deployment, see:
 - `docs/operations/TEST_STRATEGY.md`
 - `docs/operations/PROMOTION_ROLLBACK_CHECKLIST.md`
 - `docs/operations/COMPOSE_BLUE_GREEN_USAGE.md`
+- `docs/operations/VALIDATION_EVIDENCE_2026-02-28.md`
 
 ## Scripts
 - `./scripts/update.sh` build (latest stable) + restart + health
