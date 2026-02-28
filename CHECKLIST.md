@@ -1,6 +1,7 @@
 # OpenClaw Ops Checklist
 
 ## Daily
+- Full safe maintenance check: `./scripts/daily_maintenance.sh`
 - Health + channel probe: `./scripts/healthcheck.sh`
 - Logs: `./scripts/logs.sh`
 - Cron process: `service cron status`

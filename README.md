@@ -78,6 +78,7 @@ For strict production change guardrails and parallel deployment, see:
 - `./scripts/update.sh` build (latest stable) + restart + health
 - `./scripts/restart.sh` restart + health
 - `./scripts/healthcheck.sh` gateway health + channel probe with retries
+- `./scripts/daily_maintenance.sh` daily safe maintenance with auto-recovery checks
 - `./scripts/logs.sh` tail latest log (add `--follow`)
 - `./scripts/backup.sh` create a tarball backup (fails hard on errors)
 - `./scripts/install_cron.sh` install/update OpenClaw cron block (idempotent)

@@ -124,6 +124,7 @@ docker run -d --name openclaw --restart unless-stopped \
 - `./scripts/update.sh` build (latest stable) + restart + health
 - `./scripts/restart.sh` restart + health
 - `./scripts/healthcheck.sh` gateway health + channel probe with retries
+- `./scripts/daily_maintenance.sh` daily safe maintenance + auto-recovery checks
 - `./scripts/logs.sh` tail latest log (add `--follow`)
 - `./scripts/backup.sh` backup core state (credentials excluded by default)
 - `./scripts/prune_logs.sh` compress/prune old logs

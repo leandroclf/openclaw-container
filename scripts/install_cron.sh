@@ -6,6 +6,7 @@ OPENCLAW_HOME="${OPENCLAW_HOME:-$HOME/openclaw}"
 ALERTS_FILE="${ALERTS_FILE:-$OPENCLAW_HOME/config/alerts.env}"
 
 HEALTH_SCHEDULE="${HEALTH_SCHEDULE:-*/15 * * * *}"
+DAILY_MAINTENANCE_SCHEDULE="${DAILY_MAINTENANCE_SCHEDULE:-10 6 * * *}"
 BACKUP_SCHEDULE="${BACKUP_SCHEDULE:-0 3 * * 0}"
 UPDATE_SCHEDULE="${UPDATE_SCHEDULE:-30 3 * * *}"
 MODEL_ROUTER_BASELINE_SCHEDULE="${MODEL_ROUTER_BASELINE_SCHEDULE:-45 3 * * *}"
@@ -36,6 +37,7 @@ sed -i '/^# === OpenClaw container ops ===$/,/^# === \/OpenClaw container ops ==
 cat >> "$tmp" <<EOF
 # === OpenClaw container ops ===
 $HEALTH_SCHEDULE . $ALERTS_FILE && $ROOT_DIR/scripts/healthcheck_notify.sh >> $OPENCLAW_HOME/logs/healthcheck.log 2>&1
+$DAILY_MAINTENANCE_SCHEDULE . $ALERTS_FILE && $ROOT_DIR/scripts/daily_maintenance.sh >> $OPENCLAW_HOME/logs/daily-maintenance.log 2>&1
 $BACKUP_SCHEDULE $ROOT_DIR/scripts/backup.sh >> $OPENCLAW_HOME/logs/backup.log 2>&1
 $UPDATE_SCHEDULE $ROOT_DIR/scripts/update.sh >> $OPENCLAW_HOME/logs/update.log 2>&1
 $MODEL_ROUTER_BASELINE_SCHEDULE $ROOT_DIR/scripts/model_router.py --objective $MODEL_ROUTER_BASELINE_OBJECTIVE --probe --apply >> $OPENCLAW_HOME/logs/model-router.log 2>&1
