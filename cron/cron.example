@@ -12,8 +12,8 @@
 # Model routing policy refresh:
 # - baseline after update
 45 3 * * * /home/leandro/openclaw-container/scripts/model_router.py --objective balanced_default --probe --apply >> /home/leandro/openclaw/logs/model-router.log 2>&1
-# - business hours: prioritize coding quality
-5 8 * * 1-5 /home/leandro/openclaw-container/scripts/model_router.py --objective coding_quality --probe --apply >> /home/leandro/openclaw/logs/model-router.log 2>&1
+# - business hours: balanced mode (coding_quality only on-demand)
+5 8 * * 1-5 /home/leandro/openclaw-container/scripts/model_router.py --objective balanced_default --probe --apply >> /home/leandro/openclaw/logs/model-router.log 2>&1
 # - off-hours: optimize cost
 5 20 * * * /home/leandro/openclaw-container/scripts/model_router.py --objective cost_optimized --probe --apply >> /home/leandro/openclaw/logs/model-router.log 2>&1
 15 4 * * * /home/leandro/openclaw-container/scripts/prune_logs.sh >> /home/leandro/openclaw/logs/prune.log 2>&1

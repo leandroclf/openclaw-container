@@ -90,6 +90,29 @@ class ModelRouterUnitTests(unittest.TestCase):
             ],
         )
 
+    def test_normalize_state_set(self) -> None:
+        normalized = self.router.normalize_state_set([" ok ", "RATE_LIMIT", "", "ok"])
+        self.assertEqual(normalized, {"ok", "rate_limit"})
+
+    def test_filter_by_runtime_states(self) -> None:
+        candidates = [
+            ("m1", {"provider": "p1"}),
+            ("m2", {"provider": "p2"}),
+            ("m3", {"provider": "p3"}),
+        ]
+        provider_state_map = {"p1": "ok", "p2": "missing", "p3": "ok"}
+        probe_state_map = {"m1": "ok", "m2": "ok", "m3": "rate_limit"}
+        filtered, excluded = self.router.filter_by_runtime_states(
+            candidates=candidates,
+            provider_state_map=provider_state_map,
+            probe_state_map=probe_state_map,
+            excluded_provider_states={"missing"},
+            excluded_probe_states={"rate_limit"},
+            probe_enabled=True,
+        )
+        self.assertEqual([name for name, _ in filtered], ["m1"])
+        self.assertEqual(sorted(item["model"] for item in excluded), ["m2", "m3"])
+
 
 if __name__ == "__main__":
     unittest.main()

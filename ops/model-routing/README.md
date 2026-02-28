@@ -3,13 +3,15 @@
 This folder defines a policy-based model router for OpenClaw.
 
 Goal: choose `primary + fallbacks` per objective with quality first and
-cost-benefit as fallback.
+cost-benefit as fallback, while limiting token burn during long runs.
 
 ## What this solves
 
 - Consistent model selection by objective (`coding`, `reasoning`, `research`,
   `image`, `video`, `cost`).
 - Live availability-aware routing using current auth/probe state from OpenClaw.
+- Automatic filtering of models in invalid runtime states (`auth`, missing auth).
+- Objective runtime tuning (`maxConcurrent`, `subagents`, `contextPruning`).
 - Versioned policy in git (`catalog + objective weights`).
 
 ## Files
@@ -55,7 +57,7 @@ Apply and run objective callbacks:
 ## Operational rule
 
 1. Keep `balanced_default` for daily operations.
-2. Switch objective before heavy workloads:
+2. Keep `coding_quality` as manual/on-demand mode (not all-day default):
    - `coding_quality` for deep implementation/debug.
    - `reasoning_quality` for architecture/strategy decisions.
    - `research_depth` for web/data synthesis.

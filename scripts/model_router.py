@@ -25,7 +25,7 @@ PROVIDER_SCORE_ADJUST = {
 
 PROBE_SCORE_ADJUST = {
     "ok": 4.0,
-    "unknown": -8.0,
+    "unknown": -2.0,
     "rate_limit": -15.0,
     "auth": -35.0,
 }
@@ -50,6 +50,12 @@ def unique_preserve_order(items: list[str]) -> list[str]:
         seen.add(item)
         ordered.append(item)
     return ordered
+
+
+def normalize_state_set(states: list[str] | None) -> set[str]:
+    if not states:
+        return set()
+    return {str(state).strip().lower() for state in states if str(state).strip()}
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -172,40 +178,106 @@ def filter_by_modalities(
     return filtered
 
 
+def filter_by_runtime_states(
+    candidates: list[tuple[str, dict[str, Any]]],
+    provider_state_map: dict[str, str],
+    probe_state_map: dict[str, str],
+    excluded_provider_states: set[str],
+    excluded_probe_states: set[str],
+    probe_enabled: bool,
+) -> tuple[list[tuple[str, dict[str, Any]]], list[dict[str, str]]]:
+    filtered: list[tuple[str, dict[str, Any]]] = []
+    excluded: list[dict[str, str]] = []
+    for model_key, model_cfg in candidates:
+        provider = str(model_cfg.get("provider", ""))
+        provider_state = str(provider_state_map.get(provider, "unknown")).lower()
+        probe_state_raw = probe_state_map.get(model_key)
+        probe_state = str(probe_state_raw).lower() if probe_state_raw else None
+
+        blocked_by_provider = provider_state in excluded_provider_states
+        blocked_by_probe = probe_enabled and probe_state in excluded_probe_states
+
+        if blocked_by_provider or blocked_by_probe:
+            reasons: list[str] = []
+            if blocked_by_provider:
+                reasons.append(f"provider={provider_state}")
+            if blocked_by_probe and probe_state is not None:
+                reasons.append(f"probe={probe_state}")
+            excluded.append(
+                {
+                    "model": model_key,
+                    "providerState": provider_state,
+                    "probeState": probe_state or "",
+                    "reason": ",".join(reasons),
+                }
+            )
+            continue
+
+        filtered.append((model_key, model_cfg))
+    return filtered, excluded
+
+
+def config_set(container: str, profile: str, key: str, value: Any) -> None:
+    if isinstance(value, (dict, list, int, float, bool)) or value is None:
+        payload = json.dumps(value)
+    else:
+        payload = str(value)
+    run_command(
+        [
+            "docker",
+            "exec",
+            container,
+            "openclaw",
+            "--profile",
+            profile,
+            "config",
+            "set",
+            key,
+            payload,
+        ]
+    )
+
+
 def apply_openclaw_routing(
     container: str,
     profile: str,
     primary: str,
     fallbacks: list[str],
+    runtime_tuning: dict[str, Any] | None = None,
 ) -> None:
-    run_command(
-        [
-            "docker",
-            "exec",
-            container,
-            "openclaw",
-            "--profile",
-            profile,
-            "config",
-            "set",
-            "agents.defaults.model.primary",
-            primary,
-        ]
-    )
-    run_command(
-        [
-            "docker",
-            "exec",
-            container,
-            "openclaw",
-            "--profile",
-            profile,
-            "config",
-            "set",
-            "agents.defaults.model.fallbacks",
-            json.dumps(fallbacks),
-        ]
-    )
+    config_set(container, profile, "agents.defaults.model.primary", primary)
+    config_set(container, profile, "agents.defaults.model.fallbacks", fallbacks)
+    if runtime_tuning:
+        if "maxConcurrent" in runtime_tuning:
+            config_set(container, profile, "agents.defaults.maxConcurrent", runtime_tuning["maxConcurrent"])
+        if "subagentsMaxConcurrent" in runtime_tuning:
+            config_set(
+                container,
+                profile,
+                "agents.defaults.subagents.maxConcurrent",
+                runtime_tuning["subagentsMaxConcurrent"],
+            )
+        if "subagentsModel" in runtime_tuning:
+            config_set(
+                container,
+                profile,
+                "agents.defaults.subagents.model",
+                runtime_tuning["subagentsModel"],
+            )
+        if "contextPruningMode" in runtime_tuning:
+            config_set(
+                container,
+                profile,
+                "agents.defaults.contextPruning.mode",
+                runtime_tuning["contextPruningMode"],
+            )
+        if "contextPruningTTL" in runtime_tuning:
+            config_set(
+                container,
+                profile,
+                "agents.defaults.contextPruning.ttl",
+                runtime_tuning["contextPruningTTL"],
+            )
 
 
 def render_callbacks(callbacks: list[str], container: str, profile: str) -> list[str]:
@@ -322,6 +394,21 @@ def main() -> int:
     candidates = [(m, cfg) for m, cfg in model_catalog.items() if m in available_models]
     required_modalities = objective_cfg.get("requiredModalities", ["text"])
     candidates = filter_by_modalities(candidates, required_modalities)
+    excluded_provider_states = normalize_state_set(constraints.get("excludeProviderStates"))
+    excluded_provider_states.update(normalize_state_set(objective_cfg.get("excludeProviderStates")))
+    excluded_probe_states = normalize_state_set(constraints.get("excludeProbeStates"))
+    excluded_probe_states.update(normalize_state_set(objective_cfg.get("excludeProbeStates")))
+    filtered_out_by_state: list[dict[str, str]] = []
+    candidates_after_state_filter, filtered_out_by_state = filter_by_runtime_states(
+        candidates=candidates,
+        provider_state_map=provider_state_map,
+        probe_state_map=probe_state_map,
+        excluded_provider_states=excluded_provider_states,
+        excluded_probe_states=excluded_probe_states,
+        probe_enabled=args.probe,
+    )
+    if candidates_after_state_filter:
+        candidates = candidates_after_state_filter
 
     if not candidates:
         raise SystemExit(
@@ -365,6 +452,7 @@ def main() -> int:
         position=ensure_position,
     )
     callbacks = render_callbacks(objective_cfg.get("callbacks", []), args.container, args.profile)
+    runtime_tuning = objective_cfg.get("runtimeTuning", {})
 
     report = {
         "generatedAt": datetime.now(timezone.utc).isoformat(),
@@ -377,6 +465,10 @@ def main() -> int:
         "enforcementNotes": enforcement_notes,
         "applied": bool(args.apply),
         "probeUsed": bool(args.probe),
+        "excludedProviderStates": sorted(excluded_provider_states),
+        "excludedProbeStates": sorted(excluded_probe_states),
+        "filteredOutByState": filtered_out_by_state,
+        "runtimeTuning": runtime_tuning,
         "scoredModels": scored,
         "callbacks": callbacks,
     }
@@ -385,7 +477,13 @@ def main() -> int:
     Path(args.report).write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
 
     if args.apply:
-        apply_openclaw_routing(args.container, args.profile, primary, fallbacks)
+        apply_openclaw_routing(
+            args.container,
+            args.profile,
+            primary,
+            fallbacks,
+            runtime_tuning=runtime_tuning,
+        )
         if args.run_callbacks and callbacks:
             run_callbacks(callbacks)
 
@@ -396,8 +494,12 @@ def main() -> int:
     print(f"Objective: {args.objective}")
     print(f"Primary : {primary}")
     print(f"Fallbacks ({len(fallbacks)}): {', '.join(fallbacks) if fallbacks else '-'}")
+    if runtime_tuning:
+        print(f"Runtime tuning: {json.dumps(runtime_tuning, ensure_ascii=True)}")
     if enforced_models:
         print(f"Enforced fallback models: {', '.join(enforced_models)}")
+    if filtered_out_by_state:
+        print(f"Filtered by runtime state: {len(filtered_out_by_state)} model(s)")
     if enforcement_notes:
         for note in enforcement_notes:
             print(f"Note: {note}")

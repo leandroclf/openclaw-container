@@ -37,10 +37,15 @@
       "workspace": "/home/node/clawd",
       "contextPruning": {
         "mode": "cache-ttl",
-        "ttl": "1h"
+        "ttl": "45m"
       },
       "compaction": {
         "mode": "safeguard"
+      },
+      "maxConcurrent": 2,
+      "subagents": {
+        "maxConcurrent": 3,
+        "model": "google-gemini-cli/gemini-2.5-flash"
       },
       "elevatedDefault": "full",
       "heartbeat": {

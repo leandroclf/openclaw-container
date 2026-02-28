@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "version": "2026-02-27",
+    "version": "2026-02-28",
     "notes": [
       "Weights should sum to 1.0.",
       "Tune per business objective and token budget."
@@ -10,21 +10,35 @@
     "ensureFallbackModels": [
       "openai-codex/gpt-5.3-codex"
     ],
-    "ensureFallbackPosition": "append"
+    "ensureFallbackPosition": "append",
+    "excludeProviderStates": [
+      "missing",
+      "expired"
+    ],
+    "excludeProbeStates": [
+      "auth"
+    ]
   },
   "objectives": {
     "balanced_default": {
-      "description": "Default daily mode with quality + cost balance.",
-      "fallbackCount": 3,
+      "description": "Default daily mode with quality + cost balance and conservative burn.",
+      "fallbackCount": 2,
       "requiredModalities": [
         "text"
       ],
       "weights": {
-        "coding": 0.32,
-        "reasoning": 0.28,
-        "research": 0.2,
-        "latency": 0.1,
-        "cost_efficiency": 0.1
+        "coding": 0.28,
+        "reasoning": 0.23,
+        "research": 0.17,
+        "latency": 0.15,
+        "cost_efficiency": 0.17
+      },
+      "runtimeTuning": {
+        "maxConcurrent": 2,
+        "subagentsMaxConcurrent": 3,
+        "subagentsModel": "google-gemini-cli/gemini-2.5-flash",
+        "contextPruningMode": "cache-ttl",
+        "contextPruningTTL": "45m"
       },
       "callbacks": [
         "docker exec {container} openclaw --profile {profile} models status",
@@ -32,17 +46,24 @@
       ]
     },
     "coding_quality": {
-      "description": "Highest coding quality with practical fallback chain.",
-      "fallbackCount": 3,
+      "description": "High coding quality with cost guardrails.",
+      "fallbackCount": 2,
       "requiredModalities": [
         "text"
       ],
       "weights": {
-        "coding": 0.58,
-        "reasoning": 0.24,
+        "coding": 0.54,
+        "reasoning": 0.22,
         "research": 0.1,
-        "latency": 0.04,
-        "cost_efficiency": 0.04
+        "latency": 0.05,
+        "cost_efficiency": 0.09
+      },
+      "runtimeTuning": {
+        "maxConcurrent": 2,
+        "subagentsMaxConcurrent": 2,
+        "subagentsModel": "google-gemini-cli/gemini-2.5-flash",
+        "contextPruningMode": "cache-ttl",
+        "contextPruningTTL": "35m"
       },
       "callbacks": [
         "docker exec {container} openclaw --profile {profile} models status --probe --probe-provider openai-codex --probe-timeout 12000 --probe-max-tokens 64",
@@ -51,16 +72,23 @@
     },
     "reasoning_quality": {
       "description": "Complex analysis, planning, and deep reasoning.",
-      "fallbackCount": 3,
+      "fallbackCount": 2,
       "requiredModalities": [
         "text"
       ],
       "weights": {
-        "reasoning": 0.58,
+        "reasoning": 0.5,
         "coding": 0.16,
         "research": 0.16,
-        "latency": 0.05,
-        "cost_efficiency": 0.05
+        "latency": 0.06,
+        "cost_efficiency": 0.12
+      },
+      "runtimeTuning": {
+        "maxConcurrent": 2,
+        "subagentsMaxConcurrent": 2,
+        "subagentsModel": "google-gemini-cli/gemini-2.5-flash",
+        "contextPruningMode": "cache-ttl",
+        "contextPruningTTL": "30m"
       },
       "callbacks": [
         "docker exec {container} openclaw --profile {profile} models status --probe --probe-provider anthropic --probe-timeout 12000 --probe-max-tokens 64",
@@ -69,16 +97,23 @@
     },
     "research_depth": {
       "description": "Research-heavy tasks with synthesis quality priority.",
-      "fallbackCount": 3,
+      "fallbackCount": 2,
       "requiredModalities": [
         "text"
       ],
       "weights": {
-        "research": 0.5,
+        "research": 0.45,
         "reasoning": 0.25,
         "coding": 0.1,
-        "latency": 0.07,
-        "cost_efficiency": 0.08
+        "latency": 0.08,
+        "cost_efficiency": 0.12
+      },
+      "runtimeTuning": {
+        "maxConcurrent": 2,
+        "subagentsMaxConcurrent": 2,
+        "subagentsModel": "google-gemini-cli/gemini-2.5-flash",
+        "contextPruningMode": "cache-ttl",
+        "contextPruningTTL": "30m"
       },
       "callbacks": [
         "docker exec {container} openclaw --profile {profile} models status --probe --probe-provider google-gemini-cli --probe-timeout 12000 --probe-max-tokens 64",
@@ -87,16 +122,23 @@
     },
     "cost_optimized": {
       "description": "Best cost-benefit for routine operations and cron tasks.",
-      "fallbackCount": 3,
+      "fallbackCount": 1,
       "requiredModalities": [
         "text"
       ],
       "weights": {
-        "cost_efficiency": 0.45,
+        "cost_efficiency": 0.55,
         "latency": 0.25,
-        "coding": 0.15,
-        "reasoning": 0.1,
+        "coding": 0.08,
+        "reasoning": 0.07,
         "research": 0.05
+      },
+      "runtimeTuning": {
+        "maxConcurrent": 1,
+        "subagentsMaxConcurrent": 1,
+        "subagentsModel": "google-gemini-cli/gemini-2.5-flash",
+        "contextPruningMode": "cache-ttl",
+        "contextPruningTTL": "20m"
       },
       "callbacks": [
         "docker exec {container} openclaw --profile {profile} models status",
@@ -105,7 +147,7 @@
     },
     "image_creator": {
       "description": "Image-oriented requests with multimodal bias.",
-      "fallbackCount": 3,
+      "fallbackCount": 2,
       "requiredModalities": [
         "image"
       ],
@@ -116,13 +158,20 @@
         "latency": 0.1,
         "cost_efficiency": 0.1
       },
+      "runtimeTuning": {
+        "maxConcurrent": 1,
+        "subagentsMaxConcurrent": 1,
+        "subagentsModel": "google-gemini-cli/gemini-2.5-flash",
+        "contextPruningMode": "cache-ttl",
+        "contextPruningTTL": "25m"
+      },
       "callbacks": [
         "docker exec {container} openclaw --profile {profile} models status"
       ]
     },
     "video_creator": {
       "description": "Video-oriented requests when video-capable models are available.",
-      "fallbackCount": 3,
+      "fallbackCount": 2,
       "requiredModalities": [
         "video"
       ],
@@ -132,6 +181,13 @@
         "research": 0.1,
         "latency": 0.1,
         "cost_efficiency": 0.1
+      },
+      "runtimeTuning": {
+        "maxConcurrent": 1,
+        "subagentsMaxConcurrent": 1,
+        "subagentsModel": "google-gemini-cli/gemini-2.5-flash",
+        "contextPruningMode": "cache-ttl",
+        "contextPruningTTL": "20m"
       },
       "callbacks": [
         "docker exec {container} openclaw --profile {profile} models status"

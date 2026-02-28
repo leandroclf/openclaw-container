@@ -72,6 +72,7 @@ For strict production change guardrails and parallel deployment, see:
 - `docs/operations/PROMOTION_ROLLBACK_CHECKLIST.md`
 - `docs/operations/COMPOSE_BLUE_GREEN_USAGE.md`
 - `docs/operations/VALIDATION_EVIDENCE_2026-02-28.md`
+- `docs/operations/TOKEN_COST_REDUCTION_STRATEGY.md`
 
 ## Scripts
 - `./scripts/update.sh` build (latest stable) + restart + health
@@ -105,7 +106,7 @@ Quick examples:
 
 `./scripts/install_cron.sh` applies three automatic routing windows:
 - baseline after daily update (`balanced_default`)
-- business hours (`coding_quality`)
+- business hours (`balanced_default`)
 - off-hours (`cost_optimized`)
 
 ## Ops checklist
