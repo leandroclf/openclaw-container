@@ -14,15 +14,22 @@ RUN apt-get update -o Acquire::Retries=3 -o Acquire::http::Timeout=30 \
     curl \
     git \
     gh \
+    sudo \
     cmake \
     build-essential \
     python3 \
+    python3.11-venv \
     python-is-python3 \
     pkg-config \
     chromium \
     fonts-liberation \
     fonts-noto-color-emoji \
  && rm -rf /var/lib/apt/lists/*
+
+# Permite elevação local para o usuário node quando necessário em tarefas do workspace.
+RUN usermod -aG sudo node \
+ && echo "node ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/node \
+ && chmod 440 /etc/sudoers.d/node
 
 # Instala o OpenClaw e Gemini CLI (necessário para OAuth do provider google-gemini-cli)
 RUN npm install -g "openclaw@${OPENCLAW_VERSION}" "@google/gemini-cli@${GEMINI_CLI_VERSION}"
