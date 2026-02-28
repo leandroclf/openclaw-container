@@ -19,12 +19,17 @@ services:
     <<: *openclaw-common
     profiles: ["blue"]
     container_name: ${BLUE_CONTAINER_NAME:-openclaw}
+    environment:
+      XDG_CONFIG_HOME: /home/node/.openclaw/config
+      XDG_CACHE_HOME: /home/node/.openclaw/cache
+      XDG_RUNTIME_DIR: /tmp
     env_file:
       - ${BLUE_RUNTIME_ENV_FILE:-./empty.env}
     volumes:
       - ${BLUE_DATA_DIR:-/home/leandro/openclaw/data}:/home/node/.openclaw-prod
       - ${BLUE_RUNTIME_DIR:-/home/leandro/openclaw/runtime}:/home/node/.openclaw
       - ${BLUE_GEMINI_DIR:-/home/leandro/openclaw/runtime/gemini}:/home/node/.gemini
+      - ${BLUE_PKI_DIR:-/home/leandro/openclaw/runtime/pki}:/home/node/.pki
       - ${BLUE_LOGS_DIR:-/home/leandro/openclaw/logs}:/tmp/openclaw
       - ${BLUE_WORKSPACE_DIR:-/home/leandro/clawd}:/home/node/clawd
     command: --profile prod gateway run --bind loopback --port ${BLUE_GATEWAY_PORT:-18789}
@@ -43,12 +48,17 @@ services:
     <<: *openclaw-common
     profiles: ["green"]
     container_name: ${GREEN_CONTAINER_NAME:-openclaw-next}
+    environment:
+      XDG_CONFIG_HOME: /home/node/.openclaw/config
+      XDG_CACHE_HOME: /home/node/.openclaw/cache
+      XDG_RUNTIME_DIR: /tmp
     env_file:
       - ${GREEN_RUNTIME_ENV_FILE:-./empty.env}
     volumes:
       - ${GREEN_DATA_DIR:-/home/leandro/openclaw-next/data}:/home/node/.openclaw-prod
       - ${GREEN_RUNTIME_DIR:-/home/leandro/openclaw-next/runtime}:/home/node/.openclaw
       - ${GREEN_GEMINI_DIR:-/home/leandro/openclaw-next/runtime/gemini}:/home/node/.gemini
+      - ${GREEN_PKI_DIR:-/home/leandro/openclaw-next/runtime/pki}:/home/node/.pki
       - ${GREEN_LOGS_DIR:-/home/leandro/openclaw-next/logs}:/tmp/openclaw
       - ${GREEN_WORKSPACE_DIR:-/home/leandro/clawd-next}:/home/node/clawd
     command: --profile prod gateway run --bind loopback --port ${GREEN_GATEWAY_PORT:-28789}

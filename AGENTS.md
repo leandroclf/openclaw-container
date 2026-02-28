@@ -25,6 +25,7 @@ hardening enabled, stable health, and clear operational procedures.
 - Data volume: `~/openclaw/data` -> `/home/node/.openclaw-prod`
 - Runtime volume (cron): `~/openclaw/runtime` -> `/home/node/.openclaw`
 - Gemini runtime dir: `~/openclaw/runtime/gemini` -> `/home/node/.gemini`
+- Chromium/NSS runtime dir: `~/openclaw/runtime/pki` -> `/home/node/.pki`
 - Logs: `~/openclaw/logs` -> `/tmp/openclaw`
 - Workspace: `~/clawd` -> `/home/node/clawd`
 
@@ -40,6 +41,9 @@ DOCKER_BUILDKIT=0 docker build -t openclaw-secure:latest .
 docker rm -f openclaw 2>/dev/null || true
 docker run -d --name openclaw --restart unless-stopped \
   --env-file ~/openclaw/.env \
+  -e XDG_CONFIG_HOME=/home/node/.openclaw/config \
+  -e XDG_CACHE_HOME=/home/node/.openclaw/cache \
+  -e XDG_RUNTIME_DIR=/tmp \
   --read-only --cap-drop ALL \
   --security-opt no-new-privileges \
   --pids-limit 512 \
@@ -47,6 +51,7 @@ docker run -d --name openclaw --restart unless-stopped \
   -v ~/openclaw/data:/home/node/.openclaw-prod \
   -v ~/openclaw/runtime:/home/node/.openclaw \
   -v ~/openclaw/runtime/gemini:/home/node/.gemini \
+  -v ~/openclaw/runtime/pki:/home/node/.pki \
   -v ~/openclaw/logs:/tmp/openclaw \
   -v ~/clawd:/home/node/clawd \
   openclaw-secure --profile prod gateway run --bind loopback --port 18789
@@ -70,6 +75,7 @@ docker run -d --name openclaw --restart unless-stopped \
 
 ### Current key settings (do not remove)
 - `browser.executablePath = /usr/bin/chromium`
+- `browser.defaultProfile = openclaw-auto`
 - `agents.defaults.workspace = /home/node/clawd`
 - `gateway.bind = loopback`, `gateway.mode = local`, `gateway.port = 18789`
 - `channels.telegram.dmPolicy = pairing`
@@ -108,6 +114,12 @@ docker run -d --name openclaw --restart unless-stopped \
 
 ## Troubleshooting
 - If health fails after hardening, check writes to `/home/node/.openclaw`.
+- Browser automation mode must use profile `openclaw-auto` (driver `openclaw`).
+- If browser start fails with CDP/crashpad errors, verify:
+  - container envs `XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, `XDG_RUNTIME_DIR`;
+  - mounted `~/openclaw/runtime/pki` at `/home/node/.pki`;
+  - `browser.defaultProfile` set to `openclaw-auto`.
+- Keep profile `chrome` only for optional manual extension takeover.
 - If unauthorized `device_token_mismatch`, ensure gateway token is provided
   via env and config placeholder `${OPENCLAW_GATEWAY_TOKEN}`.
 - If container fails, inspect `/tmp/openclaw/openclaw-*.log` (persisted).

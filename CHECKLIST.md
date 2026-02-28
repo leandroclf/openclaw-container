@@ -3,6 +3,7 @@
 ## Daily
 - Full safe maintenance check: `./scripts/daily_maintenance.sh`
 - Health + channel probe: `./scripts/healthcheck.sh`
+- Browser profile status: `docker exec openclaw openclaw --profile prod browser profiles`
 - Logs: `./scripts/logs.sh`
 - Cron process: `service cron status`
 
@@ -13,6 +14,7 @@
 
 ## After changes
 - `docker exec openclaw openclaw --profile prod status`
+- `docker exec openclaw openclaw --profile prod browser --browser-profile openclaw-auto status --json`
 - If Telegram issues: check pairing + allowlist.
 
 ## Before any production change

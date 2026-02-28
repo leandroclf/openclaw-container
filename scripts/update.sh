@@ -15,8 +15,11 @@ OPENCLAW_HOME="${OPENCLAW_HOME:-$HOME/openclaw}"
 ENV_FILE="${ENV_FILE:-$OPENCLAW_HOME/.env}"
 WORKSPACE="${WORKSPACE:-$HOME/clawd}"
 GEMINI_HOME_DIR="${GEMINI_HOME_DIR:-$OPENCLAW_HOME/runtime/gemini}"
+XDG_CONFIG_DIR="${XDG_CONFIG_DIR:-$OPENCLAW_HOME/runtime/config}"
+XDG_CACHE_DIR="${XDG_CACHE_DIR:-$OPENCLAW_HOME/runtime/cache}"
+PKI_DIR="${PKI_DIR:-$OPENCLAW_HOME/runtime/pki}"
 
-mkdir -p "$OPENCLAW_HOME/data" "$OPENCLAW_HOME/logs" "$OPENCLAW_HOME/runtime" "$WORKSPACE" "$GEMINI_HOME_DIR"
+mkdir -p "$OPENCLAW_HOME/data" "$OPENCLAW_HOME/logs" "$OPENCLAW_HOME/runtime" "$WORKSPACE" "$GEMINI_HOME_DIR" "$XDG_CONFIG_DIR" "$XDG_CACHE_DIR" "$PKI_DIR"
 chmod 700 "$OPENCLAW_HOME" "$OPENCLAW_HOME/data" "$OPENCLAW_HOME/runtime"
 if [ -f "$ENV_FILE" ]; then
   chmod 600 "$ENV_FILE"
@@ -44,6 +47,9 @@ docker rm -f "$CONTAINER" 2>/dev/null || true
 
 docker run -d --name "$CONTAINER" --restart unless-stopped \
   --env-file "$ENV_FILE" \
+  -e XDG_CONFIG_HOME=/home/node/.openclaw/config \
+  -e XDG_CACHE_HOME=/home/node/.openclaw/cache \
+  -e XDG_RUNTIME_DIR=/tmp \
   --read-only --cap-drop ALL \
   --security-opt no-new-privileges \
   --pids-limit "$PIDS_LIMIT" \
@@ -51,8 +57,13 @@ docker run -d --name "$CONTAINER" --restart unless-stopped \
   -v "$OPENCLAW_HOME/data":/home/node/.openclaw-prod \
   -v "$OPENCLAW_HOME/runtime":/home/node/.openclaw \
   -v "$GEMINI_HOME_DIR":/home/node/.gemini \
+  -v "$PKI_DIR":/home/node/.pki \
   -v "$OPENCLAW_HOME/logs":/tmp/openclaw \
   -v "$WORKSPACE":/home/node/clawd \
   "$IMAGE" --profile "$PROFILE" gateway run --bind "$BIND" --port "$PORT"
 
 "$ROOT_DIR/scripts/healthcheck.sh"
+
+# Keep browser automation in managed OpenClaw mode (no extension dependency).
+docker exec "$CONTAINER" openclaw --profile "$PROFILE" browser create-profile --name openclaw-auto --driver openclaw >/dev/null 2>&1 || true
+docker exec "$CONTAINER" openclaw --profile "$PROFILE" config set browser.defaultProfile openclaw-auto >/dev/null

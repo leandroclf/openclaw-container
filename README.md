@@ -13,7 +13,7 @@ DOCKER_BUILDKIT=0 docker build --build-arg OPENCLAW_VERSION=latest -t openclaw-s
 ### 2) Prepare folders
 ```bash
 mkdir -p ~/openclaw/{data,logs,config,runtime}
-mkdir -p ~/openclaw/runtime/gemini
+mkdir -p ~/openclaw/runtime/{gemini,config,cache,pki}
 mkdir -p ~/clawd
 chmod 700 ~/openclaw ~/openclaw/data ~/openclaw/runtime
 chmod 600 ~/openclaw/.env
@@ -24,6 +24,9 @@ chmod 600 ~/openclaw/.env
 docker rm -f openclaw 2>/dev/null || true
 docker run -d --name openclaw --restart unless-stopped \
   --env-file ~/openclaw/.env \
+  -e XDG_CONFIG_HOME=/home/node/.openclaw/config \
+  -e XDG_CACHE_HOME=/home/node/.openclaw/cache \
+  -e XDG_RUNTIME_DIR=/tmp \
   --read-only --cap-drop ALL \
   --security-opt no-new-privileges \
   --pids-limit 512 \
@@ -31,6 +34,7 @@ docker run -d --name openclaw --restart unless-stopped \
   -v ~/openclaw/data:/home/node/.openclaw-prod \
   -v ~/openclaw/runtime:/home/node/.openclaw \
   -v ~/openclaw/runtime/gemini:/home/node/.gemini \
+  -v ~/openclaw/runtime/pki:/home/node/.pki \
   -v ~/openclaw/logs:/tmp/openclaw \
   -v ~/clawd:/home/node/clawd \
   openclaw-secure --profile prod gateway run --bind loopback --port 18789
@@ -41,6 +45,16 @@ docker run -d --name openclaw --restart unless-stopped \
 docker exec openclaw openclaw --profile prod gateway health
 ```
 If you see a 1006 error immediately after restart, wait 5-10 seconds and retry.
+
+### 5) Browser automation (no human action)
+```bash
+docker exec openclaw openclaw --profile prod browser create-profile --name openclaw-auto --driver openclaw
+docker exec openclaw openclaw --profile prod config set browser.defaultProfile openclaw-auto
+docker exec openclaw openclaw --profile prod browser --browser-profile openclaw-auto start --json
+docker exec openclaw openclaw --profile prod browser --browser-profile openclaw-auto stop --json
+```
+If `create-profile` returns "already exists", continue with the next command.
+Keep profile `chrome` only for optional manual extension takeover.
 
 ## Secrets
 - Use `~/openclaw/.env` for all secrets.
