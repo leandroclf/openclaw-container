@@ -20,6 +20,7 @@ RUN apt-get update -o Acquire::Retries=3 -o Acquire::http::Timeout=30 \
     python3 \
     python3.11-venv \
     python-is-python3 \
+    ripgrep \
     pkg-config \
     chromium \
     fonts-liberation \
