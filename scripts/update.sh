@@ -62,6 +62,12 @@ docker run -d --name "$CONTAINER" --restart unless-stopped \
   -v "$WORKSPACE":/home/node/clawd \
   "$IMAGE" --profile "$PROFILE" gateway run --bind "$BIND" --port "$PORT"
 
+validate_json="$(docker exec "$CONTAINER" openclaw --profile "$PROFILE" config validate --json 2>/dev/null || true)"
+if ! echo "$validate_json" | grep -q '"valid":true'; then
+  echo "ERROR: runtime config validation failed after update." >&2
+  exit 1
+fi
+
 "$ROOT_DIR/scripts/healthcheck.sh"
 
 # Keep browser automation in managed OpenClaw mode (no extension dependency).

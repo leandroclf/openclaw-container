@@ -7,6 +7,7 @@ PROFILE="${PROFILE:-prod}"
 OPENCLAW_HOME="${OPENCLAW_HOME:-$HOME/openclaw}"
 LOG_DIR="${LOG_DIR:-$OPENCLAW_HOME/logs}"
 ALERT_TARGET="${ALERT_TELEGRAM_TARGET:-}"
+RUN_SECRETS_AUDIT="${RUN_SECRETS_AUDIT:-1}"
 
 HEALTH_RETRIES="${HEALTH_RETRIES:-6}"
 HEALTH_DELAY="${HEALTH_DELAY:-5}"
@@ -53,6 +54,24 @@ ensure_container_running() {
 
 run_health() {
   CHECK_CHANNEL_PROBE=1 "$ROOT_DIR/scripts/healthcheck.sh" "$HEALTH_RETRIES" "$HEALTH_DELAY"
+}
+
+validate_config_runtime() {
+  local out
+  if ! out="$(docker exec "$CONTAINER" openclaw --profile "$PROFILE" config validate --json 2>/dev/null)"; then
+    log "ERROR: config validate command failed."
+    send_alert "OpenClaw daily maintenance: config validate failed on $(hostname)."
+    return 1
+  fi
+
+  if ! echo "$out" | grep -q '"valid":true'; then
+    log "ERROR: runtime config is invalid."
+    send_alert "OpenClaw daily maintenance: runtime config INVALID on $(hostname)."
+    return 1
+  fi
+
+  log "Config validate passed."
+  return 0
 }
 
 verify_health_with_recovery() {
@@ -114,6 +133,52 @@ check_duplicate_openclaw_instances() {
   fi
 }
 
+run_secrets_audit() {
+  local audit_json
+  local audit_file
+  local counts
+  local plaintext unresolved shadowed
+
+  if [ "$RUN_SECRETS_AUDIT" != "1" ]; then
+    log "Secrets audit disabled (RUN_SECRETS_AUDIT=0)."
+    return 0
+  fi
+
+  if ! audit_json="$(docker exec "$CONTAINER" openclaw --profile "$PROFILE" secrets audit --json 2>/dev/null)"; then
+    log "WARN: secrets audit command failed."
+    send_alert "OpenClaw daily maintenance: secrets audit command failed on $(hostname)."
+    return 0
+  fi
+
+  audit_file="$(mktemp)"
+  printf '%s' "$audit_json" > "$audit_file"
+  if ! counts="$(python3 - "$audit_file" <<'PY' 2>/dev/null
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+d = json.loads(path.read_text(encoding="utf-8"))
+s = d.get("summary", {})
+print(s.get("plaintextCount", 0), s.get("unresolvedRefCount", 0), s.get("shadowedRefCount", 0))
+PY
+)"; then
+    rm -f "$audit_file"
+    log "WARN: unable to parse secrets audit output."
+    return 0
+  fi
+  rm -f "$audit_file"
+
+  plaintext="$(echo "$counts" | awk '{print $1}')"
+  unresolved="$(echo "$counts" | awk '{print $2}')"
+  shadowed="$(echo "$counts" | awk '{print $3}')"
+  log "Secrets audit summary: plaintext=${plaintext} unresolved=${unresolved} shadowed=${shadowed}"
+
+  if [ "${plaintext:-0}" -gt 0 ] || [ "${unresolved:-0}" -gt 0 ] || [ "${shadowed:-0}" -gt 0 ]; then
+    send_alert "OpenClaw daily maintenance: secrets audit findings on $(hostname) (plaintext=${plaintext}, unresolved=${unresolved}, shadowed=${shadowed})."
+  fi
+}
+
 print_runtime_summary() {
   log "Runtime summary:"
   docker ps --filter "name=^/${CONTAINER}$" --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
@@ -125,6 +190,8 @@ docker context ls
 docker context show
 ensure_container_running
 verify_health_with_recovery
+validate_config_runtime
+run_secrets_audit
 check_disk_usage
 check_duplicate_openclaw_instances
 check_telegram_conflicts
