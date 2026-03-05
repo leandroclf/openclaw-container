@@ -8,6 +8,7 @@ OPENCLAW_HOME="${OPENCLAW_HOME:-$HOME/openclaw}"
 LOG_DIR="${LOG_DIR:-$OPENCLAW_HOME/logs}"
 ALERT_TARGET="${ALERT_TELEGRAM_TARGET:-}"
 RUN_SECRETS_AUDIT="${RUN_SECRETS_AUDIT:-1}"
+RUN_PLACEHOLDER_AUDIT="${RUN_PLACEHOLDER_AUDIT:-1}"
 
 HEALTH_RETRIES="${HEALTH_RETRIES:-6}"
 HEALTH_DELAY="${HEALTH_DELAY:-5}"
@@ -174,9 +175,31 @@ PY
   shadowed="$(echo "$counts" | awk '{print $3}')"
   log "Secrets audit summary: plaintext=${plaintext} unresolved=${unresolved} shadowed=${shadowed}"
 
-  if [ "${plaintext:-0}" -gt 0 ] || [ "${unresolved:-0}" -gt 0 ] || [ "${shadowed:-0}" -gt 0 ]; then
-    send_alert "OpenClaw daily maintenance: secrets audit findings on $(hostname) (plaintext=${plaintext}, unresolved=${unresolved}, shadowed=${shadowed})."
+  # openclaw secrets audit can classify ${VAR} placeholders as plaintext on some versions.
+  # We alert only for unresolved/shadowed refs; placeholder policy is enforced separately.
+  if [ "${unresolved:-0}" -gt 0 ] || [ "${shadowed:-0}" -gt 0 ]; then
+    send_alert "OpenClaw daily maintenance: secrets audit findings on $(hostname) (unresolved=${unresolved}, shadowed=${shadowed})."
+  elif [ "${plaintext:-0}" -gt 0 ]; then
+    log "INFO: plaintext findings present; relying on placeholder audit for policy enforcement."
   fi
+}
+
+run_placeholder_audit() {
+  local audit_out
+
+  if [ "$RUN_PLACEHOLDER_AUDIT" != "1" ]; then
+    log "Placeholder audit disabled (RUN_PLACEHOLDER_AUDIT=0)."
+    return 0
+  fi
+
+  if ! audit_out="$(python3 "$ROOT_DIR/scripts/check_secret_placeholders.py" 2>&1)"; then
+    log "WARN: placeholder audit failed."
+    log "$audit_out"
+    send_alert "OpenClaw daily maintenance: placeholder audit failed on $(hostname). Review secrets placeholders in openclaw.json."
+    return 0
+  fi
+
+  log "Placeholder audit passed."
 }
 
 print_runtime_summary() {
@@ -192,6 +215,7 @@ ensure_container_running
 verify_health_with_recovery
 validate_config_runtime
 run_secrets_audit
+run_placeholder_audit
 check_disk_usage
 check_duplicate_openclaw_instances
 check_telegram_conflicts
