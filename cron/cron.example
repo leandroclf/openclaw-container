@@ -49,3 +49,10 @@
 # === OpenClaw Agent OS Prod autopilot SLA ===
 # 45 22 * * * flock -n /home/leandro/openclaw/runtime/agentos/prod-autopilot-sla.lock /home/leandro/openclaw-container/control-plane/scripts/prod_autopilot_sla_cycle.sh >> /home/leandro/openclaw/logs/agentos-prod-autopilot-sla.log 2>&1
 # === /OpenClaw Agent OS Prod autopilot SLA ===
+
+# Optional Agent OS production idle watchdog observation block.
+# First cut: observation only. No mini-cycle triggering from host-side cron.
+#
+# === OpenClaw Agent OS Prod idle watchdog observe ===
+# 7 * * * * flock -n /home/leandro/openclaw/runtime/agentos/prod-idle-watchdog-observe.lock /home/leandro/openclaw-container/control-plane/scripts/prod_idle_watchdog_observe_cycle.sh >> /home/leandro/openclaw/logs/agentos-prod-idle-watchdog-observe.log 2>&1
+# === /OpenClaw Agent OS Prod idle watchdog observe ===
