@@ -27,3 +27,10 @@
 # === OpenClaw Agent OS Green observe ===
 # 12,32,52 * * * * flock -n /home/leandro/openclaw-next/runtime/agentos/green-observe.lock /home/leandro/openclaw-container/control-plane/scripts/green_observe_cycle.sh >> /home/leandro/openclaw-next/logs/agentos-green-observe.log 2>&1
 # === /OpenClaw Agent OS Green observe ===
+
+# Optional Agent OS production observation block.
+# Prepare/install only after the partial promotion gate is approved.
+#
+# === OpenClaw Agent OS Prod observe ===
+# 17,47 * * * * flock -n /home/leandro/openclaw/runtime/agentos/prod-observe.lock /home/leandro/openclaw-container/control-plane/scripts/prod_observe_cycle.sh >> /home/leandro/openclaw/logs/agentos-prod-observe.log 2>&1
+# === /OpenClaw Agent OS Prod observe ===
