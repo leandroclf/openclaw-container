@@ -55,9 +55,11 @@ No cutover should happen until this flag is changed by explicit operational deci
 
 ### Phase 2 - Enable execution bridge ownership
 
-1. run execution bridge in controlled mode with:
-   - `--activate`
-   - `--internal-watchdog-primary false`
+1. run the manual cutover helper:
+   ```bash
+   /home/leandro/openclaw-container/control-plane/scripts/manual_idle_watchdog_cutover_activate.sh \
+     --confirm-cutover
+   ```
 2. verify:
    - `watchdog-execution-intent.json`
    - `watchdog-execution-state.json`
