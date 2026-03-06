@@ -64,3 +64,10 @@
 # === OpenClaw Agent OS Prod idle watchdog policy ===
 # 9 * * * * flock -n /home/leandro/openclaw/runtime/agentos/prod-idle-watchdog-policy.lock /home/leandro/openclaw-container/control-plane/scripts/prod_idle_watchdog_policy_cycle.sh >> /home/leandro/openclaw/logs/agentos-prod-idle-watchdog-policy.log 2>&1
 # === /OpenClaw Agent OS Prod idle watchdog policy ===
+
+# Optional Agent OS production idle watchdog execution-bridge block.
+# Keep disabled until the internal watchdog is no longer the primary executor.
+#
+# === OpenClaw Agent OS Prod idle watchdog execution bridge ===
+# 11 * * * * flock -n /home/leandro/openclaw/runtime/agentos/prod-idle-watchdog-execution.lock /home/leandro/openclaw-container/control-plane/scripts/prod_idle_watchdog_execution_bridge_cycle.sh >> /home/leandro/openclaw/logs/agentos-prod-idle-watchdog-execution.log 2>&1
+# === /OpenClaw Agent OS Prod idle watchdog execution bridge ===
