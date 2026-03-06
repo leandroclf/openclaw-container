@@ -19,3 +19,11 @@
 5 20 * * * /home/leandro/openclaw-container/scripts/model_router.py --objective cost_optimized --probe --apply >> /home/leandro/openclaw/logs/model-router.log 2>&1
 15 4 * * * /home/leandro/openclaw-container/scripts/prune_logs.sh >> /home/leandro/openclaw/logs/prune.log 2>&1
 # === /OpenClaw container ops ===
+
+# Optional Agent OS Green observation block (candidate only).
+# Install with:
+#   /home/leandro/openclaw-container/control-plane/scripts/install_green_observe_cron.sh
+#
+# === OpenClaw Agent OS Green observe ===
+# 12,32,52 * * * * flock -n /home/leandro/openclaw-next/runtime/agentos/green-observe.lock /home/leandro/openclaw-container/control-plane/scripts/green_observe_cycle.sh >> /home/leandro/openclaw-next/logs/agentos-green-observe.log 2>&1
+# === /OpenClaw Agent OS Green observe ===
