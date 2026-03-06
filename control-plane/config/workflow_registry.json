@@ -1,5 +1,5 @@
 {
-  "version": "2026-03-05.3",
+  "version": "2026-03-06.1",
   "workflows": {
     "daily_ops_state_lint": {
       "kind": "ops_watchdog",
@@ -37,6 +37,27 @@
       ],
       "retryable": false,
       "leaseSeconds": 120
+    },
+    "github_ci_status_collect": {
+      "kind": "ops_watchdog",
+      "title": "GitHub CI status collect",
+      "priority": "low",
+      "command": [
+        "python3",
+        "tools/github_ci_status.py"
+      ],
+      "acceptanceRequired": [
+        "report",
+        "command"
+      ],
+      "evidenceRefs": [
+        "ops/multiagent/delivery/deploy-status.json",
+        "ops/multiagent/delivery/deploy-status.md",
+        "ops/multiagent/delivery/ci-regression-watchdog.json",
+        "ops/multiagent/delivery/ci-regression-watchdog.md"
+      ],
+      "retryable": false,
+      "leaseSeconds": 180
     },
     "daily_summary_rotation": {
       "kind": "daily_summary",
