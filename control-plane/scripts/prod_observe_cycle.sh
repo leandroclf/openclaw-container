@@ -18,7 +18,6 @@ docker exec "$PROD_CONTAINER_NAME" openclaw --profile prod gateway health
 
 "$ROOT_DIR/control-plane/scripts/init_db.sh" --db "$PROD_AGENTOS_DB"
 "$ROOT_DIR/control-plane/scripts/run_workflow.sh" --db "$PROD_AGENTOS_DB" --name daily_ops_state_lint --workspace-root "$PROD_WORKSPACE_ROOT"
-"$ROOT_DIR/control-plane/scripts/run_workflow.sh" --db "$PROD_AGENTOS_DB" --name daily_summary_rotation --workspace-root "$PROD_WORKSPACE_ROOT"
 "$ROOT_DIR/control-plane/scripts/run_workflow.sh" --db "$PROD_AGENTOS_DB" --name product_progress_snapshot --workspace-root "$PROD_WORKSPACE_ROOT"
 
 docker exec "$PROD_CONTAINER_NAME" openclaw --profile prod gateway health

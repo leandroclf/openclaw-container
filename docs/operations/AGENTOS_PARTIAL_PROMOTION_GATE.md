@@ -42,11 +42,11 @@ Promote only a **production-side scheduled observation lane** equivalent to the 
 ### Allowed workflows in slice 1
 
 - `daily_ops_state_lint`
-- `daily_summary_rotation`
 - `product_progress_snapshot`
 
 ### Forbidden in slice 1
 
+- `daily_summary_rotation` inside Agent OS `prod-observe`
 - CI remediation workflows
 - repo mutation workflows
 - any workflow that opens PRs, commits, or pushes

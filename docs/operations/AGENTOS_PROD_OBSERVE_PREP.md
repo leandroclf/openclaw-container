@@ -9,11 +9,11 @@ This preparation adds the scripts needed for a host-side production observation 
 Allowed workflows:
 
 - `daily_ops_state_lint`
-- `daily_summary_rotation`
 - `product_progress_snapshot`
 
 Out of scope:
 
+- `daily_summary_rotation` remains owned by the internal once-daily OpenClaw cron
 - Telegram delivery changes
 - product repo writes
 - PR/commit/push flows
