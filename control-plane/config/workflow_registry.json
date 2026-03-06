@@ -1,0 +1,41 @@
+{
+  "version": "2026-03-05.3",
+  "workflows": {
+    "daily_ops_state_lint": {
+      "kind": "ops_watchdog",
+      "title": "Daily ops state lint",
+      "priority": "low",
+      "command": [
+        "python3",
+        "ops/multiagent/delivery/scripts/ops_state_lint.py"
+      ],
+      "acceptanceRequired": [
+        "report",
+        "command"
+      ],
+      "evidenceRefs": [
+        "ops/multiagent/delivery/ops-lint-report.md"
+      ],
+      "retryable": false,
+      "leaseSeconds": 60
+    },
+    "daily_summary_rotation": {
+      "kind": "daily_summary",
+      "title": "Daily summary rotation",
+      "priority": "low",
+      "command": [
+        "python3",
+        "ops/multiagent/delivery/scripts/daily_summary_rotate.py"
+      ],
+      "acceptanceRequired": [
+        "report",
+        "command"
+      ],
+      "evidenceRefs": [
+        "ops/multiagent/delivery/daily-summary.md"
+      ],
+      "retryable": false,
+      "leaseSeconds": 60
+    }
+  }
+}

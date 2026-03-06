@@ -11,6 +11,8 @@ class AgentOSTestCase(unittest.TestCase):
     def setUp(self) -> None:
         self.temp_dir = tempfile.TemporaryDirectory()
         self.db_path = Path(self.temp_dir.name) / "agentos.db"
+        self.workspace_root = Path(self.temp_dir.name) / "workspace"
+        self.workspace_root.mkdir()
         agentos.init_db(self.db_path)
         self.conn = agentos.open_db(self.db_path)
 
@@ -224,6 +226,53 @@ class AgentOSTestCase(unittest.TestCase):
             ],
         )
         self.assertEqual(completed["state"]["status"], "succeeded")
+
+    def test_run_registered_workflow_persists_report_and_completes(self) -> None:
+        script_dir = self.workspace_root / "ops" / "multiagent" / "delivery" / "scripts"
+        report_dir = self.workspace_root / "ops" / "multiagent" / "delivery"
+        script_dir.mkdir(parents=True)
+        report_dir.mkdir(parents=True, exist_ok=True)
+        (script_dir / "ops_state_lint.py").write_text(
+            "from pathlib import Path\n"
+            "Path('ops/multiagent/delivery/ops-lint-report.md').write_text('ok\\n', encoding='utf-8')\n"
+            "print('ops lint ok')\n",
+            encoding="utf-8",
+        )
+        registry = Path(self.temp_dir.name) / "workflow_registry.json"
+        registry.write_text(
+            """
+{
+  "version": "test",
+  "workflows": {
+    "daily_ops_state_lint": {
+      "kind": "ops_watchdog",
+      "title": "Daily ops state lint",
+      "priority": "low",
+      "command": ["python3", "ops/multiagent/delivery/scripts/ops_state_lint.py"],
+      "acceptanceRequired": ["report", "command"],
+      "evidenceRefs": ["ops/multiagent/delivery/ops-lint-report.md"],
+      "retryable": false
+    }
+  }
+}
+""".strip()
+            + "\n",
+            encoding="utf-8",
+        )
+        result = agentos.run_registered_workflow(
+            self.conn,
+            workflow_name="daily_ops_state_lint",
+            workspace_root=self.workspace_root,
+            registry_path=registry,
+        )
+        self.assertEqual(result["task"]["state"]["status"], "succeeded")
+        self.assertTrue((report_dir / "ops-lint-report.md").exists())
+        events = self.conn.execute(
+            "SELECT event_type FROM events WHERE task_id=? ORDER BY created_at",
+            (result["task"]["taskId"],),
+        ).fetchall()
+        event_types = [row[0] for row in events]
+        self.assertIn("task.completed", event_types)
 
 
 if __name__ == "__main__":

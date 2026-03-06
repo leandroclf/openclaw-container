@@ -32,6 +32,7 @@ DEFAULT_REPORTS_DIR = ARTIFACTS_DIR / "reports"
 OBJECTIVES_PATH = ROOT_DIR / "ops" / "model-routing" / "objectives.json"
 SUPERVISOR_CONFIG_PATH = CONFIG_DIR / "supervisor.json"
 PREFLIGHT_POLICY_PATH = POLICIES_DIR / "production_preflight_policy.json"
+WORKFLOW_REGISTRY_PATH = CONFIG_DIR / "workflow_registry.json"
 
 TASK_STATUSES = {
     "queued",
@@ -127,6 +128,12 @@ def load_preflight_policy(path: Path = PREFLIGHT_POLICY_PATH) -> dict[str, Any]:
         "version": "2026-03-05.1",
         "forbiddenWaveCombos": ["infra+policy", "infra+routing", "infra+auth", "auth+multi-provider"],
     }
+
+
+def load_workflow_registry(path: Path = WORKFLOW_REGISTRY_PATH) -> dict[str, Any]:
+    if path.exists():
+        return load_json(path)
+    return {"version": "2026-03-05.2", "workflows": {}}
 
 
 def _require(payload: dict[str, Any], fields: list[str], prefix: str = "") -> None:
@@ -1196,6 +1203,92 @@ def persist_report(
     return str(path)
 
 
+def resolve_workflow_spec(name: str, registry_path: Path = WORKFLOW_REGISTRY_PATH) -> dict[str, Any]:
+    registry = load_workflow_registry(registry_path)
+    workflows = registry.get("workflows", {})
+    if name not in workflows:
+        raise ValidationError(f"unknown workflow: {name}")
+    spec = dict(workflows[name])
+    spec["name"] = name
+    return spec
+
+
+def run_registered_workflow(
+    conn: sqlite3.Connection,
+    *,
+    workflow_name: str,
+    workspace_root: Path,
+    worker_id: str = "workflow-runner",
+    registry_path: Path = WORKFLOW_REGISTRY_PATH,
+) -> dict[str, Any]:
+    spec = resolve_workflow_spec(workflow_name, registry_path=registry_path)
+    routing = resolve_routing(kind=spec["kind"], allowed_agents=["gemini"]).as_dict()
+    task = default_task(
+        kind=spec["kind"],
+        title=spec.get("title", workflow_name),
+        workflow=workflow_name,
+        execution_mode="AUTO",
+        priority=spec.get("priority", "low"),
+        source={"channel": "workflow", "workspaceRoot": str(workspace_root)},
+        routing=routing,
+        acceptance={
+            "required": list(spec.get("acceptanceRequired", [])),
+            "ciMustPass": bool(spec.get("ciMustPass", False)),
+        },
+        repo=spec.get("repo"),
+    )
+    enqueue_task(conn, task)
+    claimed = claim_next_task(conn, worker_id=worker_id, kinds_allowed=[spec["kind"]], lease_seconds=spec.get("leaseSeconds", 60))
+    if claimed is None:
+        raise ValidationError("unable to claim workflow task")
+    command = list(spec["command"])
+    emit_event(
+        conn,
+        event_type="task.progress",
+        task=claimed,
+        payload={"workerId": worker_id, "workflowCommand": command, "workspaceRoot": str(workspace_root)},
+        role="executor",
+    )
+    conn.commit()
+    rc, stdout, stderr = run_shell(command, cwd=workspace_root)
+    report_payload = {
+        "workflow": workflow_name,
+        "workspaceRoot": str(workspace_root),
+        "command": command,
+        "returnCode": rc,
+        "stdout": stdout,
+        "stderr": stderr,
+    }
+    report_ref = persist_report(conn, task=claimed, name=f"workflow-{workflow_name}", payload=report_payload, kind="workflow_report")
+    evidence_refs = [f"report:{report_ref}", f"command:{' '.join(command)}"]
+    for relative in spec.get("evidenceRefs", []):
+        evidence_refs.append(f"report:{workspace_root / relative}")
+    if rc == 0:
+        completed = complete_task(conn, task_id=claimed["taskId"], worker_id=worker_id, evidence_refs=evidence_refs)
+        return {
+            "task": completed,
+            "workflow": workflow_name,
+            "report": report_ref,
+            "stdout": stdout,
+            "stderr": stderr,
+        }
+    failed = fail_task(
+        conn,
+        task_id=claimed["taskId"],
+        worker_id=worker_id,
+        reason=f"workflow_exit_code:{rc}",
+        retryable=bool(spec.get("retryable", False)),
+        role="executor",
+    )
+    return {
+        "task": failed,
+        "workflow": workflow_name,
+        "report": report_ref,
+        "stdout": stdout,
+        "stderr": stderr,
+    }
+
+
 @dataclass
 class SupervisorResult:
     action: str
@@ -1436,6 +1529,12 @@ def build_parser() -> argparse.ArgumentParser:
     route_parser.add_argument("--profile", default="prod")
     route_parser.add_argument("--probe", action="store_true")
 
+    workflow_parser = sub.add_parser("workflow-run", help="Run a registered low-risk workflow via Agent OS")
+    workflow_parser.add_argument("--db", default=str(DEFAULT_DB_PATH))
+    workflow_parser.add_argument("--name", required=True)
+    workflow_parser.add_argument("--workspace-root", required=True)
+    workflow_parser.add_argument("--worker-id", default="workflow-runner")
+
     envelope_parser = sub.add_parser("envelope", help="Chunk a Telegram message")
     envelope_parser.add_argument("--header", default="[AgentOS]")
     envelope_parser.add_argument("--file", default=None)
@@ -1519,6 +1618,7 @@ def main(argv: list[str] | None = None) -> int:
         read_schema("preflight.schema.json")
         load_preflight_policy()
         load_supervisor_settings()
+        load_workflow_registry()
         _print_json({"valid": True, "schemas": 3, "policy": str(PREFLIGHT_POLICY_PATH), "supervisorConfig": str(SUPERVISOR_CONFIG_PATH)})
         return 0
 
@@ -1641,6 +1741,16 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "expire-leases":
             _print_json({"expired": expire_leases(conn)})
             return 0
+
+        if args.command == "workflow-run":
+            result = run_registered_workflow(
+                conn,
+                workflow_name=args.name,
+                workspace_root=Path(args.workspace_root),
+                worker_id=args.worker_id,
+            )
+            _print_json(result)
+            return 0 if result["task"]["state"]["status"] == "succeeded" else 1
 
         if args.command == "supervisor-cycle":
             safe_mode = None

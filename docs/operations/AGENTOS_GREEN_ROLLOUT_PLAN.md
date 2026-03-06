@@ -94,6 +94,12 @@ Acceptance:
 - existing production health remains unchanged
 - rollback is one config/script reversion only
 
+Validation example:
+
+```bash
+./control-plane/scripts/run_workflow.sh --db /tmp/agentos_wave3.db --name daily_ops_state_lint --workspace-root ~/clawd-next
+```
+
 ## Promotion gate
 
 Promote any Agent OS integration wave only if:

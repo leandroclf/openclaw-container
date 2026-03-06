@@ -105,6 +105,8 @@ For strict production change guardrails and parallel deployment, see:
 - `./scripts/model_route_apply.sh <objective>` apply routing + callbacks
 - `./scripts/agentos.py` Agent OS control-plane primitives (queue, events, preflight, scheduler, Telegram envelope)
 - `control-plane/scripts/*.sh` thin wrappers for Agent OS DB init, schema validation, preflight, and supervisor cycle
+- `control-plane/config/workflow_registry.json` low-risk workflow registry for Green rollout
+- `control-plane/scripts/run_workflow.sh` execute one registered low-risk workflow via Agent OS
 - `./scripts/test_gate.sh` run unit/regression tests (add
   `--with-integration` for container guardrail checks)
 
