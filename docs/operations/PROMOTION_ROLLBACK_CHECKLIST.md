@@ -2,6 +2,10 @@
 
 Use this checklist for every candidate promotion.
 
+For Agent OS partial promotion, use together with:
+
+- `docs/operations/AGENTOS_PARTIAL_PROMOTION_GATE.md`
+
 ## 1) Pre-promotion baseline (Blue)
 
 - [ ] Confirm Docker context:
