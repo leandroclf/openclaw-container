@@ -274,6 +274,19 @@ class AgentOSTestCase(unittest.TestCase):
         event_types = [row[0] for row in events]
         self.assertIn("task.completed", event_types)
 
+    def test_prepare_workflow_command_rewrites_hardcoded_workspace_path(self) -> None:
+        script = self.workspace_root / "ops" / "multiagent" / "delivery" / "scripts" / "daily_summary_rotate.py"
+        script.parent.mkdir(parents=True, exist_ok=True)
+        script.write_text("src = '/home/node/clawd/ops/multiagent/delivery/daily-summary.md'\n", encoding="utf-8")
+        command, rewritten = agentos.prepare_workflow_command(
+            ["python3", "ops/multiagent/delivery/scripts/daily_summary_rotate.py"],
+            self.workspace_root,
+        )
+        self.assertIsNotNone(rewritten)
+        self.assertEqual(command[0], "python3")
+        self.assertEqual(command[1], str(rewritten))
+        self.assertIn(str(self.workspace_root), rewritten.read_text(encoding="utf-8"))
+
 
 if __name__ == "__main__":
     unittest.main()

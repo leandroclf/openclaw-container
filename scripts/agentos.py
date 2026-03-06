@@ -10,6 +10,7 @@ import re
 import sqlite3
 import subprocess
 import sys
+import tempfile
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -1059,8 +1060,12 @@ def prepare_telegram_envelope(
     )
 
 
-def run_shell(cmd: list[str], cwd: Path | None = None) -> tuple[int, str, str]:
-    result = subprocess.run(cmd, cwd=cwd, text=True, capture_output=True, check=False)
+def run_shell(
+    cmd: list[str],
+    cwd: Path | None = None,
+    env: dict[str, str] | None = None,
+) -> tuple[int, str, str]:
+    result = subprocess.run(cmd, cwd=cwd, text=True, capture_output=True, check=False, env=env)
     return result.returncode, result.stdout.strip(), result.stderr.strip()
 
 
@@ -1213,6 +1218,21 @@ def resolve_workflow_spec(name: str, registry_path: Path = WORKFLOW_REGISTRY_PAT
     return spec
 
 
+def prepare_workflow_command(command: list[str], workspace_root: Path) -> tuple[list[str], Path | None]:
+    if len(command) >= 2 and command[0].startswith("python"):
+        script_path = workspace_root / command[1]
+        if script_path.exists():
+            text = script_path.read_text(encoding="utf-8")
+            if "/home/node/clawd" in text:
+                tmp_dir = Path(tempfile.mkdtemp(prefix="agentos-workflow-"))
+                rewritten = tmp_dir / script_path.name
+                rewritten.write_text(text.replace("/home/node/clawd", str(workspace_root)), encoding="utf-8")
+                updated = list(command)
+                updated[1] = str(rewritten)
+                return updated, rewritten
+    return command, None
+
+
 def run_registered_workflow(
     conn: sqlite3.Connection,
     *,
@@ -1242,25 +1262,30 @@ def run_registered_workflow(
     if claimed is None:
         raise ValidationError("unable to claim workflow task")
     command = list(spec["command"])
+    prepared_command, rewritten_path = prepare_workflow_command(command, workspace_root)
     emit_event(
         conn,
         event_type="task.progress",
         task=claimed,
-        payload={"workerId": worker_id, "workflowCommand": command, "workspaceRoot": str(workspace_root)},
+        payload={"workerId": worker_id, "workflowCommand": prepared_command, "workspaceRoot": str(workspace_root)},
         role="executor",
     )
     conn.commit()
-    rc, stdout, stderr = run_shell(command, cwd=workspace_root)
+    env = os.environ.copy()
+    env["OPENCLAW_WORKSPACE_ROOT"] = str(workspace_root)
+    rc, stdout, stderr = run_shell(prepared_command, cwd=workspace_root, env=env)
     report_payload = {
         "workflow": workflow_name,
         "workspaceRoot": str(workspace_root),
-        "command": command,
+        "command": prepared_command,
         "returnCode": rc,
         "stdout": stdout,
         "stderr": stderr,
     }
+    if rewritten_path is not None:
+        report_payload["rewrittenCommandPath"] = str(rewritten_path)
     report_ref = persist_report(conn, task=claimed, name=f"workflow-{workflow_name}", payload=report_payload, kind="workflow_report")
-    evidence_refs = [f"report:{report_ref}", f"command:{' '.join(command)}"]
+    evidence_refs = [f"report:{report_ref}", f"command:{' '.join(prepared_command)}"]
     for relative in spec.get("evidenceRefs", []):
         evidence_refs.append(f"report:{workspace_root / relative}")
     if rc == 0:
