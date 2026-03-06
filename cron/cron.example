@@ -34,3 +34,10 @@
 # === OpenClaw Agent OS Prod observe ===
 # 17,47 * * * * flock -n /home/leandro/openclaw/runtime/agentos/prod-observe.lock /home/leandro/openclaw-container/control-plane/scripts/prod_observe_cycle.sh >> /home/leandro/openclaw/logs/agentos-prod-observe.log 2>&1
 # === /OpenClaw Agent OS Prod observe ===
+
+# Optional Agent OS production policy-audit block.
+# Use after `prod-observe` is stable and collection artifacts are fresh.
+#
+# === OpenClaw Agent OS Prod policy audit ===
+# 19,49 * * * * flock -n /home/leandro/openclaw/runtime/agentos/prod-policy-audit.lock /home/leandro/openclaw-container/control-plane/scripts/prod_policy_audit_cycle.sh >> /home/leandro/openclaw/logs/agentos-prod-policy-audit.log 2>&1
+# === /OpenClaw Agent OS Prod policy audit ===
