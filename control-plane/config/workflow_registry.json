@@ -19,6 +19,25 @@
       "retryable": false,
       "leaseSeconds": 60
     },
+    "product_progress_snapshot": {
+      "kind": "ops_watchdog",
+      "title": "Product progress snapshot",
+      "priority": "low",
+      "command": [
+        "python3",
+        "ops/multiagent/delivery/scripts/product_progress_snapshot.py"
+      ],
+      "acceptanceRequired": [
+        "report",
+        "command"
+      ],
+      "evidenceRefs": [
+        "ops/multiagent/delivery/product-code-progress.md",
+        "ops/multiagent/delivery/product-code-progress.json"
+      ],
+      "retryable": false,
+      "leaseSeconds": 120
+    },
     "daily_summary_rotation": {
       "kind": "daily_summary",
       "title": "Daily summary rotation",
