@@ -37,6 +37,10 @@ Active host scheduler blocks:
 
 - `19,49 * * * *` -> `control-plane/scripts/prod_policy_audit_cycle.sh`
 
+### Agent OS production autopilot SLA
+
+- `45 22 * * *` -> `control-plane/scripts/prod_autopilot_sla_cycle.sh`
+
 Removed from host cron during cleanup:
 
 - obsolete Green observe block
@@ -48,7 +52,6 @@ Enabled internal jobs:
 
 - `Autopilot sequential delivery cycle`
 - `Autopilot idle watchdog`
-- `Daily autopilot SLA tracker`
 - `Daily summary rotation`
 - `Weekly code evolution KPI audit`
 - `Weekly specialist productivity audit`
@@ -56,6 +59,7 @@ Enabled internal jobs:
 Disabled internal jobs:
 
 - `Daily ops state lint`
+- `Daily autopilot SLA tracker`
 
 ## Agent OS slice active in production
 
@@ -126,6 +130,7 @@ It does not run:
 - model routing refresh
 - Agent OS `prod-observe`
 - Agent OS `prod-policy-audit`
+- Agent OS `prod-autopilot-sla`
 
 ### OpenClaw internal cron owns
 
@@ -148,6 +153,13 @@ It does not run:
 - `daily-summary.md` policy append
 - host-side production policy cadence
 
+### Agent OS `prod-autopilot-sla` owns
+
+- deterministic SLA generation from workspace telemetry
+- `autopilot-sla.json` and `autopilot-sla.md` refresh
+- dashboard sync for SLA artifacts
+- host-side production SLA cadence
+
 ## What was intentionally not migrated yet
 
 - Telegram delivery behavior
@@ -169,6 +181,7 @@ The system is now in a hybrid steady state:
   - internal `Daily ops state lint`
 - operationally replaced and disabled:
   - internal `Deploy log capture and status audit`
+  - internal `Daily autopilot SLA tracker`
 
 ## Recommended next phase
 
@@ -176,8 +189,8 @@ The next phase should not be another broad migration wave.
 
 It should be a targeted migration pass for:
 
-1. `Daily autopilot SLA tracker`
-2. autopilot ownership boundaries
-3. whether any non-observe workflow should enter Agent OS beyond deterministic file-based jobs
+1. autopilot ownership boundaries
+2. whether any non-observe workflow should enter Agent OS beyond deterministic file-based jobs
+3. whether the idle watchdog can be decomposed into deterministic observation + agent execution lanes
 
 Until that redesign exists, the current state is coherent and should remain stable.
