@@ -1,0 +1,8 @@
+{
+  "version": "2026-03-05.1",
+  "safeMode": true,
+  "defaultLeaseSeconds": 30,
+  "heartbeatSeconds": 10,
+  "maxDerivedTasksPerRoot": 5,
+  "maxAttempts": 3
+}

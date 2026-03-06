@@ -85,8 +85,11 @@ For strict production change guardrails and parallel deployment, see:
 - `docs/operations/TEST_STRATEGY.md`
 - `docs/operations/PROMOTION_ROLLBACK_CHECKLIST.md`
 - `docs/operations/COMPOSE_BLUE_GREEN_USAGE.md`
+- `docs/operations/AGENTOS_GREEN_ROLLOUT_PLAN.md`
 - `docs/operations/VALIDATION_EVIDENCE_2026-02-28.md`
 - `docs/operations/TOKEN_COST_REDUCTION_STRATEGY.md`
+- `docs/architecture/OpenClaw_AgentOS_Migration.md`
+- `control-plane/README.md`
 
 ## Scripts
 - `./scripts/update.sh` build (latest stable) + restart + health
@@ -100,6 +103,8 @@ For strict production change guardrails and parallel deployment, see:
 - `./scripts/prune_logs.sh` compress/prune old logs
 - `./scripts/model_router.py` objective-based model routing (dry-run or apply)
 - `./scripts/model_route_apply.sh <objective>` apply routing + callbacks
+- `./scripts/agentos.py` Agent OS control-plane primitives (queue, events, preflight, scheduler, Telegram envelope)
+- `control-plane/scripts/*.sh` thin wrappers for Agent OS DB init, schema validation, preflight, and supervisor cycle
 - `./scripts/test_gate.sh` run unit/regression tests (add
   `--with-integration` for container guardrail checks)
 

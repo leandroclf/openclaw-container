@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openclaw.local/schemas/preflight.schema.json",
+  "title": "AgentOSPreflightResult",
+  "type": "object",
+  "required": ["preflight"],
+  "properties": {
+    "preflight": {
+      "type": "object",
+      "required": [
+        "dockerContextChecked",
+        "singleContextSession",
+        "blueHealthy",
+        "isParallelCandidate",
+        "reusedProdVolumes",
+        "reusedProdWorkspace",
+        "usedProdTelegramTokenOnCandidate",
+        "changeWave",
+        "allowedToProceed"
+      ],
+      "properties": {
+        "dockerContextChecked": { "type": "boolean" },
+        "singleContextSession": { "type": "boolean" },
+        "blueHealthy": { "type": "boolean" },
+        "isParallelCandidate": { "type": "boolean" },
+        "reusedProdVolumes": { "type": "boolean" },
+        "reusedProdWorkspace": { "type": "boolean" },
+        "usedProdTelegramTokenOnCandidate": { "type": "boolean" },
+        "candidateBindLoopback": { "type": "boolean" },
+        "authMultiProvider": { "type": "boolean" },
+        "changeWave": {
+          "type": "object",
+          "required": ["infra", "policy", "routing", "auth"],
+          "properties": {
+            "infra": { "type": "boolean" },
+            "policy": { "type": "boolean" },
+            "routing": { "type": "boolean" },
+            "auth": { "type": "boolean" }
+          },
+          "additionalProperties": false
+        },
+        "allowedToProceed": { "type": "boolean" },
+        "denyReason": { "type": "string" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

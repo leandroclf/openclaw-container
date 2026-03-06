@@ -1,0 +1,25 @@
+{
+  "version": "2026-03-05.2",
+  "forbiddenWaveCombos": [
+    "infra+policy",
+    "infra+routing",
+    "infra+auth",
+    "auth+multi-provider"
+  ],
+  "requiredDockerChecks": [
+    "docker context ls",
+    "docker context show"
+  ],
+  "requiredBlueBaselineChecks": [
+    "docker ps --filter name=openclaw",
+    "docker exec openclaw openclaw --profile prod gateway health",
+    "docker exec openclaw openclaw --profile prod status",
+    "tail -n 120 ~/openclaw/logs/openclaw-$(date +%F).log"
+  ],
+  "candidateGuards": [
+    "do_not_reuse_prod_volumes",
+    "do_not_reuse_prod_workspace",
+    "do_not_use_prod_telegram_token",
+    "bind_loopback_only"
+  ]
+}

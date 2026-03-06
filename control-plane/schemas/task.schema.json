@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openclaw.local/schemas/task.schema.json",
+  "title": "AgentOSTask",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "taskId",
+    "correlationId",
+    "kind",
+    "title",
+    "workflow",
+    "executionMode",
+    "priority",
+    "source",
+    "routing",
+    "constraints",
+    "budget",
+    "acceptance",
+    "state",
+    "timestamps"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "taskId": { "type": "string", "minLength": 1 },
+    "correlationId": { "type": "string", "minLength": 1 },
+    "issueId": { "type": "string" },
+    "kind": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "workflow": { "type": "string", "minLength": 1 },
+    "executionMode": { "type": "string", "enum": ["AUTO", "HUMAN"] },
+    "priority": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+    "source": {
+      "type": "object",
+      "required": ["channel"],
+      "properties": {
+        "channel": { "type": "string" },
+        "sessionKey": { "type": "string" },
+        "messageId": { "type": "string" },
+        "userId": { "type": ["string", "integer"] }
+      },
+      "additionalProperties": true
+    },
+    "routing": {
+      "type": "object",
+      "required": ["objective", "requestedAgent", "effectiveAgent", "executionStrategy"],
+      "properties": {
+        "objective": { "type": "string" },
+        "requestedAgent": { "type": "string" },
+        "effectiveAgent": { "type": "string" },
+        "reason": { "type": "string" },
+        "executionStrategy": { "type": "string", "enum": ["single", "speculative", "consensus"] }
+      },
+      "additionalProperties": true
+    },
+    "repo": { "type": "string" },
+    "branch": { "type": "string" },
+    "constraints": {
+      "type": "object",
+      "required": ["allowWrites", "allowNetwork", "destructiveOps", "productionImpact"],
+      "properties": {
+        "allowWrites": { "type": "boolean" },
+        "allowNetwork": { "type": "boolean" },
+        "destructiveOps": { "type": "boolean" },
+        "productionImpact": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
+    "budget": {
+      "type": "object",
+      "required": ["maxRetries"],
+      "properties": {
+        "maxRetries": { "type": "integer", "minimum": 0 },
+        "maxCost": { "type": "number", "minimum": 0 },
+        "maxDurationSeconds": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": true
+    },
+    "acceptance": {
+      "type": "object",
+      "required": ["required", "ciMustPass"],
+      "properties": {
+        "required": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "ciMustPass": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
+    "state": {
+      "type": "object",
+      "required": ["status", "attempts"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["queued", "claimed", "running", "blocked", "needs_human", "failed", "succeeded", "canceled"]
+        },
+        "attempts": { "type": "integer", "minimum": 0 },
+        "leaseOwner": { "type": ["string", "null"] },
+        "leaseUntil": { "type": ["string", "null"] },
+        "nextRunAt": { "type": ["string", "null"] },
+        "lastBlockerType": { "type": ["string", "null"] },
+        "lastBlockerReason": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    },
+    "preflight": {
+      "type": "object",
+      "properties": {
+        "touchesProduction": { "type": "boolean" },
+        "isParallelCandidate": { "type": "boolean" },
+        "reusedProdVolumes": { "type": "boolean" },
+        "reusedProdWorkspace": { "type": "boolean" },
+        "usedProdTelegramTokenOnCandidate": { "type": "boolean" },
+        "candidateBindLoopback": { "type": "boolean" },
+        "authMultiProvider": { "type": "boolean" },
+        "changeWave": {
+          "type": "object",
+          "properties": {
+            "infra": { "type": "boolean" },
+            "policy": { "type": "boolean" },
+            "routing": { "type": "boolean" },
+            "auth": { "type": "boolean" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": true
+    },
+    "timestamps": {
+      "type": "object",
+      "required": ["createdAt", "updatedAt"],
+      "properties": {
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

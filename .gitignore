@@ -17,6 +17,16 @@ scripts/__pycache__/
 tests/**/__pycache__/
 *.pyc
 
+# Control plane local state
+control-plane/state/*.db
+control-plane/state/*.db-*
+control-plane/artifacts/events/*.jsonl
+control-plane/artifacts/tasks/*.json
+control-plane/artifacts/reports/*
+!control-plane/artifacts/reports/.gitkeep
+*.Zone.Identifier
+*:Zone.Identifier
+
 # Local compose envs
 compose/blue.env
 compose/green.env

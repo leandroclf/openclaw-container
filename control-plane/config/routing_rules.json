@@ -1,0 +1,40 @@
+{
+  "version": "2026-03-05.1",
+  "defaultObjective": "balanced_default",
+  "defaultExecutionStrategy": "single",
+  "requestedAgentDefaults": {
+    "code_impl": "codex",
+    "code_review": "codex",
+    "debug_ci": "codex",
+    "architecture": "gemini",
+    "planning": "gemini",
+    "research": "gemini",
+    "ops_watchdog": "gemini",
+    "daily_summary": "gemini",
+    "heartbeat": "gemini",
+    "default_chat": "gemini",
+    "image_request": "gemini",
+    "video_request": "gemini"
+  },
+  "kindToObjective": {
+    "code_impl": "coding_quality",
+    "code_review": "coding_quality",
+    "debug_ci": "coding_quality",
+    "architecture": "reasoning_quality",
+    "planning": "reasoning_quality",
+    "research": "research_depth",
+    "ops_watchdog": "cost_optimized",
+    "daily_summary": "cost_optimized",
+    "heartbeat": "cost_optimized",
+    "default_chat": "balanced_default",
+    "image_request": "image_creator",
+    "video_request": "video_creator"
+  },
+  "kindToPreflightRequired": {
+    "ops_deploy": true,
+    "runtime_change": true,
+    "policy_change": true,
+    "routing_change": true,
+    "auth_change": true
+  }
+}
