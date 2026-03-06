@@ -16,6 +16,23 @@ Do not run this cutover unless all are true:
 6. production health stable
 7. rollback operator ready
 
+## Readiness command
+
+Use the host-side readiness assessor before any cutover decision:
+
+```bash
+python3 /home/leandro/openclaw-container/scripts/idle_watchdog_cutover_readiness.py \
+  --bridge-dir /home/leandro/openclaw/runtime/agentos/handoffs
+```
+
+Expected status today:
+
+- `NO_GO`
+- failed check:
+  - `internal_watchdog_primary`
+
+The cutover must remain blocked until the readiness output becomes `GO`.
+
 ## Current blocker
 
 The execution bridge is intentionally blocked because:
