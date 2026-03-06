@@ -33,6 +33,10 @@ Active host scheduler blocks:
 
 - `17,47 * * * *` -> `control-plane/scripts/prod_observe_cycle.sh`
 
+### Agent OS production policy audit
+
+- `19,49 * * * *` -> `control-plane/scripts/prod_policy_audit_cycle.sh`
+
 Removed from host cron during cleanup:
 
 - obsolete Green observe block
@@ -44,7 +48,6 @@ Enabled internal jobs:
 
 - `Autopilot sequential delivery cycle`
 - `Autopilot idle watchdog`
-- `Deploy log capture and status audit`
 - `Daily autopilot SLA tracker`
 - `Daily summary rotation`
 - `Weekly code evolution KPI audit`
@@ -64,6 +67,7 @@ It currently runs:
 
 - `daily_ops_state_lint`
 - `product_progress_snapshot`
+- `github_ci_status_collect`
 
 It no longer runs:
 
@@ -83,6 +87,35 @@ Reason:
 - lock:
   - `~/openclaw/runtime/agentos/prod-observe.lock`
 
+## Agent OS policy wrapper slice in production
+
+### Current scope
+
+The deploy-audit policy layer also runs host-side now.
+
+It currently runs:
+
+- `deploy_audit_policy_wrapper.py`
+
+It consumes only:
+
+- `deploy-status.json`
+- `ci-regression-watchdog.json`
+- `product-code-progress.json`
+
+It does not run:
+
+- `github_ci_status.py`
+- `product_progress_snapshot.py`
+- direct GitHub collection
+
+### Runtime state
+
+- log:
+  - `~/openclaw/logs/agentos-prod-policy-audit.log`
+- lock:
+  - `~/openclaw/runtime/agentos/prod-policy-audit.lock`
+
 ## Ownership model after cleanup
 
 ### Host-side WSL cron owns
@@ -92,12 +125,12 @@ Reason:
 - backup/update/log pruning
 - model routing refresh
 - Agent OS `prod-observe`
+- Agent OS `prod-policy-audit`
 
 ### OpenClaw internal cron owns
 
 - delivery autopilot
 - idle watchdog
-- CI/deploy audit with alert policy
 - daily summary rotation
 - weekly governance/KPI audits
 
@@ -106,6 +139,14 @@ Reason:
 - structured observation of low-risk operational workflows
 - append-only DB/event/report evidence
 - host-side production observation cadence
+- collection of CI/progress artifacts used by policy evaluation
+
+### Agent OS `prod-policy-audit` owns
+
+- freshness validation for collection artifacts
+- `ALERT_OWNERSHIP_POLICY.md` evaluation
+- `daily-summary.md` policy append
+- host-side production policy cadence
 
 ## What was intentionally not migrated yet
 
@@ -126,15 +167,17 @@ The system is now in a hybrid steady state:
   - Green observe host block
   - host-side standalone `github_ci_status.py`
   - internal `Daily ops state lint`
+- operationally replaced and disabled:
+  - internal `Deploy log capture and status audit`
 
 ## Recommended next phase
 
 The next phase should not be another broad migration wave.
 
-It should be a targeted design pass for:
+It should be a targeted migration pass for:
 
-1. `Deploy log capture and status audit`
+1. `Daily autopilot SLA tracker`
 2. autopilot ownership boundaries
-3. whether any non-observe workflow should enter Agent OS
+3. whether any non-observe workflow should enter Agent OS beyond deterministic file-based jobs
 
 Until that redesign exists, the current state is coherent and should remain stable.
