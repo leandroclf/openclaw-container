@@ -41,3 +41,11 @@
 # === OpenClaw Agent OS Prod policy audit ===
 # 19,49 * * * * flock -n /home/leandro/openclaw/runtime/agentos/prod-policy-audit.lock /home/leandro/openclaw-container/control-plane/scripts/prod_policy_audit_cycle.sh >> /home/leandro/openclaw/logs/agentos-prod-policy-audit.log 2>&1
 # === /OpenClaw Agent OS Prod policy audit ===
+
+# Optional Agent OS production autopilot SLA tracker block.
+# Use in parallel with the internal tracker first, then disable the internal cron
+# only after proving equivalence.
+#
+# === OpenClaw Agent OS Prod autopilot SLA ===
+# 45 22 * * * flock -n /home/leandro/openclaw/runtime/agentos/prod-autopilot-sla.lock /home/leandro/openclaw-container/control-plane/scripts/prod_autopilot_sla_cycle.sh >> /home/leandro/openclaw/logs/agentos-prod-autopilot-sla.log 2>&1
+# === /OpenClaw Agent OS Prod autopilot SLA ===
