@@ -71,3 +71,14 @@ soon as the provider layer starts exposing them.
 - Coding still retains Codex fallback when quality is needed.
 - The router is future-ready for `GPT-5 mini` and Gemini Flash-Lite once
   OpenClaw exposes them in `models list`.
+
+## Scheduler adjustment
+
+To reduce burn without hurting daytime work:
+
+- `03:45` switches to `cost_optimized`
+- `08:05` weekdays switches back to `balanced_default`
+- `20:05` daily returns to `cost_optimized`
+
+This keeps business-hour interaction on the balanced chain while leaving
+overnight and off-hours automation on the cheaper route.
