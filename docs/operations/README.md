@@ -1,10 +1,12 @@
 # Operations Guardrails
 
-This folder contains mandatory operational guardrails to keep OpenClaw online
-while evolving infrastructure.
+This folder contains the current production guardrails plus historical evidence
+from the Agent OS migration.
 
 ## Files
 
+- `OPERATIONS_DOC_INDEX_2026-03-10.md`
+  - Canonical index of current vs historical operations documents.
 - `PRODUCTION_CHANGE_POLICY.md`
   - Non-negotiable rules for zero-downtime change management.
 - `BLUE_GREEN_WSL_DOCKER_DESKTOP.md`
@@ -21,7 +23,9 @@ while evolving infrastructure.
 
 ## Usage order
 
-1. Read policy before any production change.
-2. Run blue/green procedure for candidate validation.
-3. Run test gates.
-4. Promote only after functional and soak validation.
+1. Read `OPERATIONS_DOC_INDEX_2026-03-10.md` to identify the current source of
+   truth.
+2. Read policy before any production change.
+3. Run blue/green procedure only when a parallel candidate is actually needed.
+4. Run test gates.
+5. Promote only after functional and soak validation.
