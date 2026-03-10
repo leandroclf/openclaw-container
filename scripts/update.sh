@@ -26,6 +26,8 @@ if [ -f "$ENV_FILE" ]; then
   chmod 600 "$ENV_FILE"
 fi
 
+"$ROOT_DIR/scripts/sync_runtime_config.sh"
+
 if [ -z "$OPENCLAW_VERSION" ]; then
   OPENCLAW_VERSION="$(npm view openclaw version 2>/dev/null || true)"
 fi

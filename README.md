@@ -94,6 +94,8 @@ For strict production change guardrails and parallel deployment, see:
 ## Scripts
 - `./scripts/update.sh` build (latest stable) + restart + health
 - `./scripts/restart.sh` restart + health
+- `./scripts/sync_runtime_config.sh` copy `~/openclaw/data/openclaw.json` into
+  the runtime state paths expected by current OpenClaw releases
 - `./scripts/healthcheck.sh` gateway health + channel probe with retries
 - `./scripts/daily_maintenance.sh` daily safe maintenance with auto-recovery checks + secrets placeholder policy audit
 - `./scripts/check_secret_placeholders.py` validate that sensitive config paths use `${VAR}` placeholders (no literal secrets/SecretRef objects)

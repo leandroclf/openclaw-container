@@ -22,6 +22,8 @@ log() {
   echo "[$(date -Is)] $*"
 }
 
+"$ROOT_DIR/scripts/sync_runtime_config.sh" >/dev/null
+
 send_alert() {
   local message="$1"
   if [ -z "$ALERT_TARGET" ]; then
