@@ -24,8 +24,8 @@ PROVIDER_SCORE_ADJUST = {
 }
 
 PROBE_SCORE_ADJUST = {
-    "ok": 4.0,
-    "unknown": -2.0,
+    "ok": 3.0,
+    "unknown": 0.0,
     "rate_limit": -15.0,
     "auth": -35.0,
 }
@@ -116,12 +116,37 @@ def get_models_status(
 
 def build_provider_status_map(status: dict[str, Any]) -> dict[str, str]:
     provider_status: dict[str, str] = {}
-    providers = status.get("auth", {}).get("oauth", {}).get("providers", [])
-    for item in providers:
+    auth = status.get("auth", {})
+
+    # OAuth statuses remain relevant for providers that only authenticate via
+    # stored profiles.
+    oauth_providers = auth.get("oauth", {}).get("providers", [])
+    for item in oauth_providers:
         provider = item.get("provider")
         if not provider:
             continue
         provider_status[provider] = item.get("status", "unknown")
+
+    # API-key/env-backed providers (for example `openai`) are represented under
+    # `auth.providers` and should not be treated as missing just because they do
+    # not have an OAuth profile.
+    providers = auth.get("providers", [])
+    for item in providers:
+        provider = item.get("provider")
+        if not provider:
+            continue
+        effective = item.get("effective", {}) or {}
+        profiles = item.get("profiles", {}) or {}
+
+        if effective.get("kind") in {"env", "profiles"}:
+            provider_status[provider] = "ok"
+            continue
+
+        if profiles.get("count", 0):
+            provider_status[provider] = "ok"
+            continue
+
+        provider_status.setdefault(provider, "missing")
     return provider_status
 
 

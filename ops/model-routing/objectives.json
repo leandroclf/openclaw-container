@@ -22,16 +22,16 @@
   "objectives": {
     "balanced_default": {
       "description": "Default daily mode with quality + cost balance and conservative burn.",
-      "fallbackCount": 2,
+      "fallbackCount": 3,
       "requiredModalities": [
         "text"
       ],
       "weights": {
-        "coding": 0.28,
-        "reasoning": 0.23,
-        "research": 0.17,
+        "coding": 0.25,
+        "reasoning": 0.21,
+        "research": 0.15,
         "latency": 0.15,
-        "cost_efficiency": 0.17
+        "cost_efficiency": 0.24
       },
       "runtimeTuning": {
         "maxConcurrent": 2,
@@ -47,7 +47,7 @@
     },
     "coding_quality": {
       "description": "High coding quality with cost guardrails.",
-      "fallbackCount": 2,
+      "fallbackCount": 3,
       "requiredModalities": [
         "text"
       ],
@@ -61,7 +61,7 @@
       "runtimeTuning": {
         "maxConcurrent": 2,
         "subagentsMaxConcurrent": 2,
-        "subagentsModel": "google-gemini-cli/gemini-2.5-flash",
+        "subagentsModel": "openai/gpt-4.1-mini",
         "contextPruningMode": "cache-ttl",
         "contextPruningTTL": "35m"
       },
@@ -72,7 +72,7 @@
     },
     "reasoning_quality": {
       "description": "Complex analysis, planning, and deep reasoning.",
-      "fallbackCount": 2,
+      "fallbackCount": 3,
       "requiredModalities": [
         "text"
       ],
@@ -97,7 +97,7 @@
     },
     "research_depth": {
       "description": "Research-heavy tasks with synthesis quality priority.",
-      "fallbackCount": 2,
+      "fallbackCount": 3,
       "requiredModalities": [
         "text"
       ],
@@ -122,23 +122,23 @@
     },
     "cost_optimized": {
       "description": "Best cost-benefit for routine operations and cron tasks.",
-      "fallbackCount": 1,
+      "fallbackCount": 2,
       "requiredModalities": [
         "text"
       ],
       "weights": {
-        "cost_efficiency": 0.55,
-        "latency": 0.25,
+        "cost_efficiency": 0.58,
+        "latency": 0.24,
         "coding": 0.08,
         "reasoning": 0.07,
-        "research": 0.05
+        "research": 0.03
       },
       "runtimeTuning": {
         "maxConcurrent": 1,
         "subagentsMaxConcurrent": 1,
-        "subagentsModel": "google-gemini-cli/gemini-2.5-flash",
+        "subagentsModel": "openai/gpt-4.1-nano",
         "contextPruningMode": "cache-ttl",
-        "contextPruningTTL": "20m"
+        "contextPruningTTL": "15m"
       },
       "callbacks": [
         "docker exec {container} openclaw --profile {profile} models status",

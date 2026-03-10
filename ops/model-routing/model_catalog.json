@@ -1,10 +1,11 @@
 {
   "metadata": {
-    "version": "2026-02-27",
+    "version": "2026-03-10",
     "scoringScale": "0-100 (higher is better)",
     "notes": [
       "Scores are policy inputs, not hard truth.",
-      "Refresh monthly using public benchmarks and provider pricing pages."
+      "Refresh monthly using public benchmarks and provider pricing pages.",
+      "2026-03-10 refresh incorporates official OpenAI and Gemini pricing changes for lower-cost routing."
     ],
     "sourceRefs": [
       "OpenClaw models status/list output",
@@ -134,6 +135,108 @@
         "video": 30,
         "latency": 88,
         "cost_efficiency": 95
+      }
+    },
+    "google-gemini-cli/gemini-2.5-flash-lite": {
+      "provider": "google-gemini-cli",
+      "modalities": {
+        "text": true,
+        "image": true,
+        "video": true
+      },
+      "scores": {
+        "coding": 77,
+        "reasoning": 75,
+        "research": 76,
+        "image": 66,
+        "video": 30,
+        "latency": 96,
+        "cost_efficiency": 99
+      }
+    },
+    "google-gemini-cli/gemini-3.1-flash-lite-preview": {
+      "provider": "google-gemini-cli",
+      "modalities": {
+        "text": true,
+        "image": true,
+        "video": true
+      },
+      "scores": {
+        "coding": 80,
+        "reasoning": 78,
+        "research": 79,
+        "image": 68,
+        "video": 32,
+        "latency": 95,
+        "cost_efficiency": 97
+      }
+    },
+    "openai/gpt-5-mini": {
+      "provider": "openai",
+      "modalities": {
+        "text": true,
+        "image": true,
+        "video": false
+      },
+      "scores": {
+        "coding": 90,
+        "reasoning": 88,
+        "research": 84,
+        "image": 68,
+        "video": 20,
+        "latency": 84,
+        "cost_efficiency": 92
+      }
+    },
+    "openai/gpt-4.1-mini": {
+      "provider": "openai",
+      "modalities": {
+        "text": true,
+        "image": true,
+        "video": false
+      },
+      "scores": {
+        "coding": 84,
+        "reasoning": 81,
+        "research": 79,
+        "image": 64,
+        "video": 20,
+        "latency": 83,
+        "cost_efficiency": 82
+      }
+    },
+    "openai/gpt-4.1-nano": {
+      "provider": "openai",
+      "modalities": {
+        "text": true,
+        "image": true,
+        "video": false
+      },
+      "scores": {
+        "coding": 73,
+        "reasoning": 69,
+        "research": 67,
+        "image": 58,
+        "video": 20,
+        "latency": 96,
+        "cost_efficiency": 96
+      }
+    },
+    "openai/gpt-4o-mini": {
+      "provider": "openai",
+      "modalities": {
+        "text": true,
+        "image": true,
+        "video": false
+      },
+      "scores": {
+        "coding": 78,
+        "reasoning": 74,
+        "research": 73,
+        "image": 72,
+        "video": 22,
+        "latency": 91,
+        "cost_efficiency": 86
       }
     }
   }
