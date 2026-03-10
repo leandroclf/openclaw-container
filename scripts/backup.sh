@@ -3,25 +3,42 @@ set -euo pipefail
 
 OPENCLAW_HOME="${OPENCLAW_HOME:-$HOME/openclaw}"
 BACKUP_DIR="${BACKUP_DIR:-$OPENCLAW_HOME/backups}"
-INCLUDE_CREDENTIALS="${INCLUDE_CREDENTIALS:-0}"
+PROFILE="${PROFILE:-prod}"
+ONLY_CONFIG="${ONLY_CONFIG:-0}"
+INCLUDE_WORKSPACE="${INCLUDE_WORKSPACE:-0}"
+VERIFY_BACKUP="${VERIFY_BACKUP:-1}"
+RUNTIME_BACKUP_DIR="${RUNTIME_BACKUP_DIR:-$OPENCLAW_HOME/runtime/backups}"
 
 mkdir -p "$BACKUP_DIR"
+if [ -e "$RUNTIME_BACKUP_DIR" ] && [ ! -d "$RUNTIME_BACKUP_DIR" ]; then
+  mv "$RUNTIME_BACKUP_DIR" "${RUNTIME_BACKUP_DIR}.legacy-file-$(date +%Y%m%d-%H%M%S)"
+fi
+mkdir -p "$RUNTIME_BACKUP_DIR"
 
-stamp=$(date +%Y%m%d-%H%M%S)
-backup_file="$BACKUP_DIR/openclaw-backup-$stamp.tar.gz"
+stamp="$(date +%Y%m%d-%H%M%S)"
+archive_name="openclaw-backup-$stamp.tar.gz"
+container_output="/home/node/.openclaw/backups/$archive_name"
+staged_output="$RUNTIME_BACKUP_DIR/$archive_name"
+final_output="$BACKUP_DIR/$archive_name"
 
-excludes=()
-if [ "$INCLUDE_CREDENTIALS" -ne 1 ]; then
-  excludes+=(--exclude "$OPENCLAW_HOME/data/credentials")
+cmd=(docker exec openclaw openclaw --profile "$PROFILE" backup create --output "$container_output")
+
+if [ "$ONLY_CONFIG" -eq 1 ]; then
+  cmd+=(--only-config)
+fi
+if [ "$INCLUDE_WORKSPACE" -ne 1 ]; then
+  cmd+=(--no-include-workspace)
+fi
+if [ "$VERIFY_BACKUP" -eq 1 ]; then
+  cmd+=(--verify)
 fi
 
-# Backup core state; logs are omitted by default
-if tar -czf "$backup_file" "${excludes[@]}" \
-  "$OPENCLAW_HOME/data" \
-  "$OPENCLAW_HOME/runtime" \
-  "$OPENCLAW_HOME/config"; then
-  echo "Backup created: $backup_file"
-else
-  echo "Backup failed: $backup_file" >&2
+"${cmd[@]}"
+
+if [ ! -f "$staged_output" ]; then
+  echo "ERROR: staged backup not found at $staged_output" >&2
   exit 1
 fi
+
+mv "$staged_output" "$final_output"
+echo "Backup created: $final_output"

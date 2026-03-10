@@ -100,8 +100,10 @@ For strict production change guardrails and parallel deployment, see:
 - `./scripts/daily_maintenance.sh` daily safe maintenance with auto-recovery checks + secrets placeholder policy audit
 - `./scripts/check_secret_placeholders.py` validate that sensitive config paths use `${VAR}` placeholders (no literal secrets/SecretRef objects)
 - `./scripts/logs.sh` tail latest log (add `--follow`)
-- `./scripts/backup.sh` create a tarball backup (fails hard on errors)
-- `./scripts/install_cron.sh` install/update OpenClaw cron block (idempotent)
+- `./scripts/backup.sh` create a verified OpenClaw backup archive using the
+  native backup CLI
+- `./scripts/install_cron.sh` install/update the full production cron layout
+  (container ops + active Agent OS host-side lanes)
 - `./scripts/prune_logs.sh` compress/prune old logs
 - `./scripts/model_router.py` objective-based model routing (dry-run or apply)
 - `./scripts/model_route_apply.sh <objective>` apply routing + callbacks
