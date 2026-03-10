@@ -23,6 +23,7 @@ The script always performs, in order:
 5. execution bridge activation with:
    - `--activate`
    - `--internal-watchdog-primary false`
+   - `--trigger-cron-name "Autopilot sequential delivery cycle"`
 6. `gateway health` after activation
 
 ## Current Expected Result

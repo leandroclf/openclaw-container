@@ -4,6 +4,7 @@ set -euo pipefail
 PROD_OPENCLAW_HOME="${PROD_OPENCLAW_HOME:-$HOME/openclaw}"
 BRIDGE_DIR="${BRIDGE_DIR:-$PROD_OPENCLAW_HOME/runtime/agentos/handoffs}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+TARGET_CRON_NAME="${TARGET_CRON_NAME:-Autopilot sequential delivery cycle}"
 
 if [[ "${1:-}" != "--confirm-cutover" ]]; then
   echo "Refusing to activate without --confirm-cutover."
@@ -25,7 +26,8 @@ fi
 python3 "$ROOT_DIR/scripts/idle_watchdog_execution_bridge.py" \
   --bridge-dir "$BRIDGE_DIR" \
   --activate \
-  --internal-watchdog-primary false
+  --internal-watchdog-primary false \
+  --trigger-cron-name "$TARGET_CRON_NAME"
 
 docker exec openclaw openclaw --profile prod gateway health >/dev/null
 

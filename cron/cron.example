@@ -65,9 +65,23 @@
 # 9 * * * * flock -n /home/leandro/openclaw/runtime/agentos/prod-idle-watchdog-policy.lock /home/leandro/openclaw-container/control-plane/scripts/prod_idle_watchdog_policy_cycle.sh >> /home/leandro/openclaw/logs/agentos-prod-idle-watchdog-policy.log 2>&1
 # === /OpenClaw Agent OS Prod idle watchdog policy ===
 
+# Optional Agent OS production idle watchdog handoff bridge block.
+# Use after observe/policy repeatability is proven.
+#
+# === OpenClaw Agent OS Prod idle watchdog handoff bridge ===
+# 10 * * * * flock -n /home/leandro/openclaw/runtime/agentos/prod-idle-watchdog-handoff.lock /home/leandro/openclaw-container/control-plane/scripts/prod_idle_watchdog_handoff_bridge_cycle.sh >> /home/leandro/openclaw/logs/agentos-prod-idle-watchdog-handoff.log 2>&1
+# === /OpenClaw Agent OS Prod idle watchdog handoff bridge ===
+
+# Optional Agent OS production idle watchdog handoff consumer block.
+# Keep read-only until the internal watchdog executor is retired.
+#
+# === OpenClaw Agent OS Prod idle watchdog handoff consumer ===
+# 11 * * * * flock -n /home/leandro/openclaw/runtime/agentos/prod-idle-watchdog-consumer.lock /home/leandro/openclaw-container/control-plane/scripts/prod_idle_watchdog_handoff_consumer_cycle.sh >> /home/leandro/openclaw/logs/agentos-prod-idle-watchdog-consumer.log 2>&1
+# === /OpenClaw Agent OS Prod idle watchdog handoff consumer ===
+
 # Optional Agent OS production idle watchdog execution-bridge block.
 # Keep disabled until the internal watchdog is no longer the primary executor.
 #
 # === OpenClaw Agent OS Prod idle watchdog execution bridge ===
-# 11 * * * * flock -n /home/leandro/openclaw/runtime/agentos/prod-idle-watchdog-execution.lock /home/leandro/openclaw-container/control-plane/scripts/prod_idle_watchdog_execution_bridge_cycle.sh >> /home/leandro/openclaw/logs/agentos-prod-idle-watchdog-execution.log 2>&1
+# 12 * * * * flock -n /home/leandro/openclaw/runtime/agentos/prod-idle-watchdog-execution.lock env EXECUTION_BRIDGE_MODE=dry-run INTERNAL_WATCHDOG_PRIMARY=true TARGET_CRON_NAME='Autopilot sequential delivery cycle' /home/leandro/openclaw-container/control-plane/scripts/prod_idle_watchdog_execution_bridge_cycle.sh >> /home/leandro/openclaw/logs/agentos-prod-idle-watchdog-execution.log 2>&1
 # === /OpenClaw Agent OS Prod idle watchdog execution bridge ===

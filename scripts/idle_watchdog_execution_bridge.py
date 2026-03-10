@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -26,6 +27,23 @@ def load_json(path: Path) -> dict:
 
 def save_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def run_json(cmd: list[str]) -> object:
+    return json.loads(subprocess.check_output(cmd, text=True))
+
+
+def run_text(cmd: list[str]) -> str:
+    return subprocess.check_output(cmd, text=True).strip()
+
+
+def resolve_cron_job_id(profile: str, cron_name: str) -> str | None:
+    payload = run_json(["docker", "exec", "openclaw", "openclaw", "--profile", profile, "cron", "list", "--json"])
+    jobs = payload["jobs"] if isinstance(payload, dict) else payload
+    for job in jobs:
+        if job.get("name") == cron_name and job.get("enabled", True):
+            return job.get("id")
+    return None
 
 
 def render_md(intent: dict) -> str:
@@ -50,9 +68,13 @@ def render_md(intent: dict) -> str:
         "",
         "## Planned Executor Contract",
         "- executorOwner: internal OpenClaw watchdog until ownership transfer is approved",
-        "- triggerMethod: not implemented in this cut",
-        "- sideEffect: none in dry-run mode",
+        f"- triggerMethod: {intent['execution'].get('triggerMethod', 'not configured')}",
+        f"- sideEffect: {intent['execution'].get('sideEffect', 'none in dry-run mode')}",
     ]
+    if intent["execution"].get("jobId"):
+        lines.append(f"- cronJobId: `{intent['execution']['jobId']}`")
+    if intent["execution"].get("result"):
+        lines.append(f"- triggerResult: `{intent['execution']['result']}`")
     if intent.get("notes"):
         lines.extend(["", "## Notes"])
         lines.extend([f"- {note}" for note in intent["notes"]])
@@ -63,6 +85,9 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--bridge-dir", required=True)
     parser.add_argument("--activate", action="store_true")
+    parser.add_argument("--profile", default="prod")
+    parser.add_argument("--trigger-cron-name")
+    parser.add_argument("--trigger-timeout-ms", default="600000")
     parser.add_argument(
         "--internal-watchdog-primary",
         choices=["true", "false"],
@@ -114,6 +139,53 @@ def main() -> None:
     if not duplicate_prevented:
         notes.append("Request was already executed previously.")
 
+    trigger_method = "none"
+    side_effect = "none in dry-run mode"
+    trigger_job_id = None
+    trigger_result = None
+    trigger_output = None
+
+    if args.activate and not notes:
+        if not args.trigger_cron_name:
+            notes.append("Execution bridge activation requires --trigger-cron-name.")
+        else:
+            trigger_job_id = resolve_cron_job_id(args.profile, args.trigger_cron_name)
+            if not trigger_job_id:
+                notes.append(f"Cron job not found or disabled: {args.trigger_cron_name}")
+            else:
+                trigger_method = f"openclaw cron run {args.trigger_cron_name}"
+                side_effect = "trigger host-approved internal delivery cycle"
+                try:
+                    trigger_output = run_text(
+                        [
+                            "docker",
+                            "exec",
+                            "openclaw",
+                            "openclaw",
+                            "--profile",
+                            args.profile,
+                            "cron",
+                            "run",
+                            trigger_job_id,
+                            "--timeout",
+                            args.trigger_timeout_ms,
+                        ]
+                    )
+                    trigger_result = "triggered"
+                except subprocess.CalledProcessError as exc:
+                    trigger_result = "failed"
+                    trigger_output = (exc.output or "").strip()
+                    notes.append("Cron trigger failed during execution bridge activation.")
+
+    final_notes = notes
+    if not notes:
+        if args.activate and trigger_result == "triggered":
+            final_notes = ["Execution bridge activated and the internal delivery cycle was triggered."]
+        elif args.activate:
+            final_notes = ["Execution bridge activation completed."]
+        else:
+            final_notes = ["Execution bridge is ready for a future ownership transfer."]
+
     intent = {
         "requestId": request_id,
         "generatedAt": now.isoformat().replace("+00:00", "Z"),
@@ -131,7 +203,14 @@ def main() -> None:
             "eligibleAutoTasks": request["source"].get("eligibleAutoTasks"),
             "reason": request["source"].get("reason"),
         },
-        "notes": notes or ["Execution bridge is ready for a future ownership transfer."],
+        "execution": {
+            "triggerMethod": trigger_method,
+            "sideEffect": side_effect,
+            "jobId": trigger_job_id,
+            "result": trigger_result,
+            "output": trigger_output,
+        },
+        "notes": final_notes,
     }
 
     execution_state.update(
@@ -144,6 +223,8 @@ def main() -> None:
     )
     if args.activate and not notes:
         execution_state["lastExecutedRequestId"] = request_id
+        execution_state["lastTriggerCronJobId"] = trigger_job_id
+        execution_state["lastTriggerResult"] = trigger_result
 
     save_json(intent_json_path, intent)
     intent_md_path.write_text(render_md(intent), encoding="utf-8")
