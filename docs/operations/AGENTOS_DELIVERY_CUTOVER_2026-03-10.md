@@ -10,7 +10,7 @@ Replace the internal time-based ownership of `Autopilot sequential delivery cycl
 2. promotes executor-ready tasks
 3. exports a delivery handoff artifact
 4. validates consumer readiness
-5. triggers the internal executor backend only through the handoff
+5. triggers the direct OpenClaw agent executor only through the handoff
 6. reconciles result artifacts back into the queue
 
 ## Runtime ownership after cutover
@@ -23,21 +23,20 @@ Host-side lanes now own delivery orchestration:
 - `prod-delivery-execution`
 - `prod-delivery-reconcile`
 
-Internal OpenClaw keeps only the executor backend:
+Internal OpenClaw no longer owns delivery scheduling or execution via cron.
 
-- `Autopilot sequential delivery cycle`
+- `Autopilot sequential delivery cycle` remains disabled and out of the main path.
+- The host-side execution bridge now calls `openclaw agent --agent main` directly.
 
-The internal delivery cron schedule is disabled. The job is now triggered manually by id from the host-side execution bridge.
+## Executor contract
 
-## Internal executor contract
+The host-side execution bridge now:
 
-The internal executor payload was rewritten to:
-
-- read `/home/node/.openclaw/agentos/handoffs/delivery-execution-request.json`
-- work only on that handoff
-- use `repo_access_preflight.py`
-- avoid SSH and use `./bin/git-safe`
-- write `/home/node/.openclaw/agentos/handoffs/delivery-execution-result.json`
+- reads the canonical handoff request from `~/openclaw/runtime/agentos/handoffs`
+- passes the embedded handoff JSON directly to `openclaw agent --agent main`
+- requires the agent reply to include a canonical result JSON payload
+- synthesizes a blocked canonical result when consumer/policy guards block execution
+- archives processed handoff artifacts after reconcile so the next queued task can advance
 
 ## Active cron lanes
 
@@ -49,7 +48,13 @@ The internal executor payload was rewritten to:
 
 ## Current limitation
 
-The host-side chain is fully active, but the final proof of end-to-end completion still depends on the internal executor writing `delivery-execution-result.json` as instructed. Until that artifact is observed, the reconcile lane will remain in `no_result`.
+The delivery lane is now architecturally closed end-to-end. Current blockers are no longer orchestration gaps; they are execution blockers surfaced by the lane itself, for example:
+
+- repository dirty state (`repo_dirty`)
+- agent-side blocked result with explicit cause
+- missing technical progress on a specific issue
+
+These now reconcile back into the queue as canonical `blocked` task outcomes.
 
 ## Operational evidence
 

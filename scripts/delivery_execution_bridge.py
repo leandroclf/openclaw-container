@@ -5,11 +5,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 FRESHNESS_LIMIT = timedelta(minutes=45)
+ROOT_DIR = Path(__file__).resolve().parents[1]
+DELIVERY_TEMPLATE_PATH = ROOT_DIR / "control-plane" / "config" / "delivery_executor_message.txt"
 
 
 def parse_timestamp(raw: str | None) -> datetime | None:
@@ -35,6 +38,94 @@ def run_json(cmd: list[str]) -> object:
 
 def run_text(cmd: list[str]) -> str:
     return subprocess.check_output(cmd, text=True).strip()
+
+
+def build_agent_message(request: dict) -> str:
+    template = DELIVERY_TEMPLATE_PATH.read_text(encoding="utf-8").strip()
+    task = request.get("task", {})
+    handoff_json = json.dumps(request, ensure_ascii=False, indent=2)
+    return (
+        f"{template}\n\n"
+        "HANDOFF ATUAL:\n"
+        f"- requestId: {request.get('requestId')}\n"
+        f"- issueId: {task.get('issueId')}\n"
+        f"- repo: {task.get('repo')}\n"
+        f"- branch: {task.get('branch')}\n"
+        f"- kind: {task.get('kind')}\n"
+        f"- workflow: {task.get('workflow')}\n\n"
+        "IMPORTANTE:\n"
+        "- Se o arquivo de handoff fora do workspace nao puder ser lido diretamente, use o JSON embutido abaixo como fonte oficial.\n"
+        "- Nao bloqueie por falta de acesso ao arquivo de handoff se o JSON abaixo estiver presente.\n\n"
+        "JSON DO HANDOFF:\n"
+        "```json\n"
+        f"{handoff_json}\n"
+        "```\n\n"
+        "CONTRATO DE RESPOSTA OBRIGATÓRIO:\n"
+        "1. Tente escrever `/home/node/.openclaw/agentos/handoffs/delivery-execution-result.json`.\n"
+        "2. Na resposta final, inclua exatamente um bloco com o marcador `DELIVERY_RESULT_JSON` seguido por JSON válido com:\n"
+        "   - requestId\n"
+        "   - issueId\n"
+        "   - status (`succeeded|blocked|failed`)\n"
+        "   - repo\n"
+        "   - branch\n"
+        "   - tests[]\n"
+        "   - commit\n"
+        "   - pr\n"
+        "   - ciStatus (`pass|fail|unknown`)\n"
+        "   - blockerType\n"
+        "   - blockerReason\n"
+        "   - updatedAt\n"
+        "3. Se não houver progresso técnico real, retorne `status=blocked` com causa raiz objetiva.\n"
+        "4. Não inclua nenhum outro JSON na resposta final."
+    )
+
+
+def extract_result_from_payloads(payloads: list[dict]) -> dict | None:
+    texts = [payload.get("text", "") for payload in payloads if payload.get("text")]
+    joined = "\n".join(texts)
+    patterns = [
+        r"DELIVERY_RESULT_JSON\s*```json\s*(\{.*?\})\s*```",
+        r"DELIVERY_RESULT_JSON\s*(\{.*\})",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, joined, flags=re.DOTALL)
+        if not match:
+            continue
+        try:
+            payload = json.loads(match.group(1))
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            return payload
+    for text in texts:
+        stripped = text.strip()
+        if not (stripped.startswith("{") and stripped.endswith("}")):
+            continue
+        try:
+            payload = json.loads(stripped)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            return payload
+    return None
+
+
+def build_blocked_result(request: dict, reason: str, blocker_type: str = "SOFT_BLOCKER") -> dict:
+    task = request.get("task", {})
+    return {
+        "requestId": request.get("requestId"),
+        "issueId": task.get("issueId"),
+        "status": "blocked",
+        "repo": task.get("repo"),
+        "branch": task.get("branch"),
+        "tests": [],
+        "commit": None,
+        "pr": None,
+        "ciStatus": "unknown",
+        "blockerType": blocker_type,
+        "blockerReason": reason,
+        "updatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+    }
 
 
 def resolve_cron_job(profile: str, cron_name: str) -> dict | None:
@@ -89,6 +180,9 @@ def main() -> None:
     parser.add_argument("--bridge-dir", required=True)
     parser.add_argument("--activate", action="store_true")
     parser.add_argument("--profile", default="prod")
+    parser.add_argument("--backend", choices=["agent", "cron"], default="agent")
+    parser.add_argument("--trigger-agent", default="main")
+    parser.add_argument("--agent-timeout-seconds", default="1800")
     parser.add_argument("--trigger-cron-name", default="Autopilot sequential delivery cycle")
     parser.add_argument("--trigger-cron-id", default=None)
     parser.add_argument("--trigger-timeout-ms", default="900000")
@@ -111,6 +205,8 @@ def main() -> None:
     execution_state_path = bridge_dir / "delivery-execution-state.json"
     intent_json_path = bridge_dir / "delivery-execution-intent.json"
     intent_md_path = bridge_dir / "delivery-execution-intent.md"
+    agent_output_path = bridge_dir / "delivery-execution-agent-output.json"
+    result_path = bridge_dir / "delivery-execution-result.json"
 
     now = datetime.now(timezone.utc).replace(microsecond=0)
     internal_primary = args.internal_delivery_primary == "true"
@@ -138,10 +234,15 @@ def main() -> None:
     consumer_ready = consumer_state.get("status") == "ready"
     duplicate_prevented = execution_state.get("lastExecutedRequestId") != request_id
 
-    target_job = resolve_cron_job(args.profile, args.trigger_cron_name)
-    target_enabled = bool(target_job.get("enabled", False)) if target_job else False
-    target_running = bool(target_job and target_job.get("state", {}).get("runningAtMs"))
-    target_job_id = args.trigger_cron_id or (target_job.get("id") if target_job else None)
+    target_job = None
+    target_enabled = False
+    target_running = False
+    target_job_id = None
+    if args.backend == "cron":
+        target_job = resolve_cron_job(args.profile, args.trigger_cron_name)
+        target_enabled = bool(target_job.get("enabled", False)) if target_job else False
+        target_running = bool(target_job and target_job.get("state", {}).get("runningAtMs"))
+        target_job_id = args.trigger_cron_id or (target_job.get("id") if target_job else None)
 
     notes: list[str] = []
     if internal_primary:
@@ -152,46 +253,97 @@ def main() -> None:
         notes.append("Delivery request is stale.")
     if not duplicate_prevented:
         notes.append("Request was already executed previously.")
-    if not target_job_id:
-        notes.append(f"Target cron job not found: {args.trigger_cron_name}")
-    elif not target_enabled and not args.allow_disabled_cron:
-        notes.append("Target cron job is disabled.")
-    if target_running:
-        notes.append("Target cron job is already running.")
+    if args.backend == "cron":
+        if not target_job_id:
+            notes.append(f"Target cron job not found: {args.trigger_cron_name}")
+        elif not target_enabled and not args.allow_disabled_cron:
+            notes.append("Target cron job is disabled.")
+        if target_running:
+            notes.append("Target cron job is already running.")
 
     trigger_method = "none"
     side_effect = "none in dry-run mode"
     trigger_result = None
     trigger_output = None
     if args.activate and not notes:
-        trigger_method = f"openclaw cron run {args.trigger_cron_name}"
-        side_effect = "trigger host-approved internal sequential delivery cycle"
         try:
-            trigger_output = run_text(
-                [
-                    "docker",
-                    "exec",
-                    "openclaw",
-                    "openclaw",
-                    "--profile",
-                    args.profile,
-                    "cron",
-                    "run",
-                    target_job_id,
-                    "--timeout",
-                    args.trigger_timeout_ms,
-                ]
-            )
+            if args.backend == "agent":
+                trigger_method = f"openclaw agent --agent {args.trigger_agent}"
+                side_effect = "run host-approved direct delivery executor turn"
+                trigger_output = run_text(
+                    [
+                        "docker",
+                        "exec",
+                        "openclaw",
+                        "openclaw",
+                        "--profile",
+                        args.profile,
+                        "agent",
+                        "--agent",
+                        args.trigger_agent,
+                        "--message",
+                        build_agent_message(request),
+                        "--json",
+                        "--timeout",
+                        args.agent_timeout_seconds,
+                    ]
+                )
+                parsed_output = json.loads(trigger_output)
+                save_json(agent_output_path, parsed_output)
+                if not result_path.exists():
+                    fallback_result = extract_result_from_payloads(parsed_output.get("result", {}).get("payloads", []))
+                    if fallback_result is None:
+                        fallback_result = {
+                            "requestId": request_id,
+                            "issueId": request["task"].get("issueId"),
+                            "status": "blocked",
+                            "repo": request["task"].get("repo"),
+                            "branch": request["task"].get("branch"),
+                            "tests": [],
+                            "commit": None,
+                            "pr": None,
+                            "ciStatus": "unknown",
+                            "blockerType": "SOFT_BLOCKER",
+                            "blockerReason": "agent_result_missing_canonical_output",
+                            "updatedAt": now.isoformat().replace("+00:00", "Z"),
+                        }
+                    save_json(result_path, fallback_result)
+            else:
+                trigger_method = f"openclaw cron run {args.trigger_cron_name}"
+                side_effect = "trigger host-approved internal sequential delivery cycle"
+                trigger_output = run_text(
+                    [
+                        "docker",
+                        "exec",
+                        "openclaw",
+                        "openclaw",
+                        "--profile",
+                        args.profile,
+                        "cron",
+                        "run",
+                        target_job_id,
+                        "--timeout",
+                        args.trigger_timeout_ms,
+                    ]
+                )
             trigger_result = "triggered"
         except subprocess.CalledProcessError as exc:
             trigger_output = (exc.output or "").strip()
             trigger_result = "failed"
-            notes.append("Cron trigger failed during delivery execution activation.")
+            notes.append("Delivery execution activation failed.")
+        except json.JSONDecodeError:
+            trigger_result = "failed"
+            notes.append("Agent execution returned non-JSON output.")
+    elif args.activate and notes and not result_path.exists():
+        save_json(result_path, build_blocked_result(request, "; ".join(notes)))
 
     final_notes = notes
     if not notes:
         if args.activate and trigger_result == "triggered":
-            final_notes = ["Delivery execution bridge activated and the internal sequential delivery cycle was triggered."]
+            if args.backend == "agent":
+                final_notes = ["Delivery execution bridge activated and the direct agent executor was triggered."]
+            else:
+                final_notes = ["Delivery execution bridge activated and the internal sequential delivery cycle was triggered."]
         elif args.activate:
             final_notes = ["Delivery execution bridge activation completed."]
         else:
@@ -218,6 +370,7 @@ def main() -> None:
             "kind": request["task"].get("kind"),
         },
         "execution": {
+            "backend": args.backend,
             "triggerMethod": trigger_method,
             "sideEffect": side_effect,
             "jobId": target_job_id,

@@ -100,7 +100,7 @@ $PROD_DELIVERY_HANDOFF_SCHEDULE flock -n $OPENCLAW_HOME/runtime/agentos/prod-del
 # === /OpenClaw Agent OS Prod delivery ===
 # === OpenClaw Agent OS Prod delivery execution ===
 $PROD_DELIVERY_CONSUMER_SCHEDULE flock -n $OPENCLAW_HOME/runtime/agentos/prod-delivery-consumer.lock $ROOT_DIR/control-plane/scripts/prod_delivery_handoff_consumer_cycle.sh >> $OPENCLAW_HOME/logs/agentos-prod-delivery-consumer.log 2>&1
-$PROD_DELIVERY_EXECUTION_SCHEDULE flock -n $OPENCLAW_HOME/runtime/agentos/prod-delivery-execution.lock env EXECUTION_BRIDGE_MODE=activate INTERNAL_DELIVERY_PRIMARY=false ALLOW_DISABLED_CRON=true TARGET_CRON_NAME=Autopilot\\ sequential\\ delivery\\ cycle TARGET_CRON_ID=$SEQUENTIAL_DELIVERY_CRON_ID $ROOT_DIR/control-plane/scripts/prod_delivery_execution_bridge_cycle.sh >> $OPENCLAW_HOME/logs/agentos-prod-delivery-execution.log 2>&1
+$PROD_DELIVERY_EXECUTION_SCHEDULE flock -n $OPENCLAW_HOME/runtime/agentos/prod-delivery-execution.lock env EXECUTION_BRIDGE_MODE=activate EXECUTION_BACKEND=agent TRIGGER_AGENT=main INTERNAL_DELIVERY_PRIMARY=false $ROOT_DIR/control-plane/scripts/prod_delivery_execution_bridge_cycle.sh >> $OPENCLAW_HOME/logs/agentos-prod-delivery-execution.log 2>&1
 # === /OpenClaw Agent OS Prod delivery execution ===
 # === OpenClaw Agent OS Prod delivery reconcile ===
 $PROD_DELIVERY_RECONCILE_SCHEDULE flock -n $OPENCLAW_HOME/runtime/agentos/prod-delivery-reconcile.lock $ROOT_DIR/control-plane/scripts/prod_delivery_reconcile_cycle.sh >> $OPENCLAW_HOME/logs/agentos-prod-delivery-reconcile.log 2>&1

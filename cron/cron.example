@@ -100,7 +100,7 @@
 #
 # === OpenClaw Agent OS Prod delivery execution ===
 # 17,47 * * * * flock -n /home/leandro/openclaw/runtime/agentos/prod-delivery-consumer.lock /home/leandro/openclaw-container/control-plane/scripts/prod_delivery_handoff_consumer_cycle.sh >> /home/leandro/openclaw/logs/agentos-prod-delivery-consumer.log 2>&1
-# 19,49 * * * * flock -n /home/leandro/openclaw/runtime/agentos/prod-delivery-execution.lock env EXECUTION_BRIDGE_MODE=activate INTERNAL_DELIVERY_PRIMARY=false ALLOW_DISABLED_CRON=true TARGET_CRON_NAME='Autopilot sequential delivery cycle' TARGET_CRON_ID='e6d5079d-3eaa-46fa-ac4a-4f77add89b18' /home/leandro/openclaw-container/control-plane/scripts/prod_delivery_execution_bridge_cycle.sh >> /home/leandro/openclaw/logs/agentos-prod-delivery-execution.log 2>&1
+# 19,49 * * * * flock -n /home/leandro/openclaw/runtime/agentos/prod-delivery-execution.lock env EXECUTION_BRIDGE_MODE=activate EXECUTION_BACKEND=agent TRIGGER_AGENT=main INTERNAL_DELIVERY_PRIMARY=false /home/leandro/openclaw-container/control-plane/scripts/prod_delivery_execution_bridge_cycle.sh >> /home/leandro/openclaw/logs/agentos-prod-delivery-execution.log 2>&1
 # === /OpenClaw Agent OS Prod delivery execution ===
 
 # Optional Agent OS production delivery reconcile block.

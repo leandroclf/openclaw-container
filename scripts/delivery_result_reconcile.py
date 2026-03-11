@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -33,6 +34,26 @@ def load_json(path: Path) -> dict:
 
 def save_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def archive_processed_artifacts(bridge_dir: Path, request_id: str) -> None:
+    history_dir = bridge_dir / "history"
+    history_dir.mkdir(parents=True, exist_ok=True)
+    for name in [
+        "delivery-execution-request.json",
+        "delivery-execution-request.md",
+        "delivery-handoff-state.json",
+        "delivery-execution-intent.json",
+        "delivery-execution-intent.md",
+        "delivery-execution-state.json",
+        "delivery-execution-result.json",
+        "delivery-execution-agent-output.json",
+    ]:
+        source = bridge_dir / name
+        if not source.exists():
+            continue
+        target = history_dir / f"{request_id}-{name}"
+        shutil.move(str(source), str(target))
 
 
 def build_evidence_refs(result: dict, result_path: Path) -> list[str]:
@@ -185,6 +206,7 @@ def main() -> None:
         }
     )
     save_json(state_path, state)
+    archive_processed_artifacts(bridge_dir, request_id)
     print(f"[DELIVERY_RECONCILE_{status.upper()}] requestId={request_id}")
 
 

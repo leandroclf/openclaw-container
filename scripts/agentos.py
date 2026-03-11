@@ -100,6 +100,12 @@ def now_iso() -> str:
     return now_utc().isoformat().replace("+00:00", "Z")
 
 
+def parse_timestamp(raw: str | None) -> datetime | None:
+    if not raw:
+        return None
+    return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+
+
 def ensure_dir(path: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
 
@@ -1118,13 +1124,14 @@ def build_issue_task(issue: DeliveryBoardIssue, *, workspace_root: Path, allowed
     return task
 
 
-def compute_delivery_request_id(task: dict[str, Any]) -> str:
+def compute_delivery_request_id(task: dict[str, Any], renewal: int = 0) -> str:
     payload = {
         "taskId": task["taskId"],
         "issueId": task.get("issueId"),
         "repo": task.get("repo"),
         "branch": task.get("branch"),
         "updatedAt": task["timestamps"].get("updatedAt"),
+        "renewal": renewal,
     }
     digest = hashlib.sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()
     return digest[:16]
@@ -1275,10 +1282,30 @@ def export_delivery_handoff(
             "issueId": task.get("issueId"),
         }
 
-    request_id = compute_delivery_request_id(task)
+    current = load_json(json_path) if (json_path := bridge_dir / "delivery-execution-request.json").exists() else {}
+    current_created_at = parse_timestamp(current.get("createdAt")) if current else None
+    current_stale = True
+    if current_created_at is not None:
+        current_stale = (now_utc() - current_created_at) > timedelta(minutes=30)
+
+    renewal = 0
+    if current.get("task", {}).get("taskId") == task["taskId"] and current.get("status") == "pending_internal_consumption":
+        if not current_stale:
+            md_path = bridge_dir / "delivery-execution-request.md"
+            return {
+                "status": "noop",
+                "reason": "request_already_pending",
+                "requestId": current.get("requestId"),
+                "jsonPath": str(json_path),
+                "mdPath": str(md_path),
+            }
+        renewal = int(current.get("renewal", 0)) + 1
+
+    request_id = compute_delivery_request_id(task, renewal=renewal)
     request = {
         "requestId": request_id,
         "createdAt": now_iso(),
+        "renewal": renewal,
         "status": "pending_internal_consumption",
         "task": {
             "taskId": task["taskId"],
@@ -1299,17 +1326,7 @@ def export_delivery_handoff(
         },
         "repoReadiness": repo_readiness,
     }
-    json_path = bridge_dir / "delivery-execution-request.json"
     md_path = bridge_dir / "delivery-execution-request.md"
-    current = load_json(json_path) if json_path.exists() else {}
-    if current.get("requestId") == request_id and current.get("status") == request["status"]:
-        return {
-            "status": "noop",
-            "reason": "request_already_pending",
-            "requestId": request_id,
-            "jsonPath": str(json_path),
-            "mdPath": str(md_path),
-        }
     dump_json(json_path, request)
     md_path.write_text(render_delivery_handoff_md(request), encoding="utf-8")
     return {
