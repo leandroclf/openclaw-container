@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -31,6 +32,7 @@ DEFAULT_DB_PATH = STATE_DIR / "agentos.db"
 DEFAULT_EVENTS_DIR = ARTIFACTS_DIR / "events"
 DEFAULT_TASKS_DIR = ARTIFACTS_DIR / "tasks"
 DEFAULT_REPORTS_DIR = ARTIFACTS_DIR / "reports"
+DEFAULT_HANDOFFS_DIR = STATE_DIR / "handoffs"
 OBJECTIVES_PATH = ROOT_DIR / "ops" / "model-routing" / "objectives.json"
 SUPERVISOR_CONFIG_PATH = CONFIG_DIR / "supervisor.json"
 PREFLIGHT_POLICY_PATH = POLICIES_DIR / "production_preflight_policy.json"
@@ -1116,6 +1118,212 @@ def build_issue_task(issue: DeliveryBoardIssue, *, workspace_root: Path, allowed
     return task
 
 
+def compute_delivery_request_id(task: dict[str, Any]) -> str:
+    payload = {
+        "taskId": task["taskId"],
+        "issueId": task.get("issueId"),
+        "repo": task.get("repo"),
+        "branch": task.get("branch"),
+        "updatedAt": task["timestamps"].get("updatedAt"),
+    }
+    digest = hashlib.sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()
+    return digest[:16]
+
+
+def run_capture(command: list[str], cwd: Path) -> tuple[int, str, str]:
+    completed = subprocess.run(command, cwd=cwd, text=True, capture_output=True)
+    return completed.returncode, completed.stdout.strip(), completed.stderr.strip()
+
+
+def repo_readiness_snapshot(repo_path: Path) -> dict[str, Any]:
+    snapshot: dict[str, Any] = {
+        "repoPath": str(repo_path),
+        "exists": repo_path.exists() and repo_path.is_dir(),
+        "isGit": False,
+        "currentBranch": None,
+        "remoteOrigin": None,
+        "dirtyFiles": [],
+        "canExecuteMutations": False,
+        "denyReason": None,
+    }
+    if not snapshot["exists"]:
+        snapshot["denyReason"] = "repo_missing"
+        return snapshot
+
+    rc, _, _ = run_capture(["git", "rev-parse", "--is-inside-work-tree"], repo_path)
+    if rc != 0:
+        snapshot["denyReason"] = "repo_not_git"
+        return snapshot
+    snapshot["isGit"] = True
+
+    rc, stdout, _ = run_capture(["git", "branch", "--show-current"], repo_path)
+    if rc == 0:
+        snapshot["currentBranch"] = stdout or None
+    rc, stdout, _ = run_capture(["git", "remote", "get-url", "origin"], repo_path)
+    if rc == 0:
+        snapshot["remoteOrigin"] = stdout or None
+    rc, stdout, _ = run_capture(["git", "status", "--short"], repo_path)
+    if rc == 0 and stdout:
+        snapshot["dirtyFiles"] = [line for line in stdout.splitlines() if line.strip()]
+    if snapshot["dirtyFiles"]:
+        snapshot["denyReason"] = "repo_dirty"
+        return snapshot
+
+    snapshot["canExecuteMutations"] = True
+    return snapshot
+
+
+def render_delivery_handoff_md(request: dict[str, Any]) -> str:
+    lines = [
+        "# Delivery Execution Handoff",
+        "",
+        f"requestId: `{request['requestId']}`",
+        f"taskId: `{request['task']['taskId']}`",
+        f"issueId: `{request['task'].get('issueId', 'n/a')}`",
+        f"status: `{request['status']}`",
+        "",
+        "## Task",
+        f"- title: {request['task']['title']}",
+        f"- kind: `{request['task']['kind']}`",
+        f"- workflow: `{request['task']['workflow']}`",
+        f"- executionMode: `{request['task']['executionMode']}`",
+        f"- priority: `{request['task']['priority']}`",
+        f"- repo: `{request['task'].get('repo', 'n/a')}`",
+        f"- branch: `{request['task'].get('branch', 'n/a')}`",
+        "",
+        "## Routing",
+        f"- requestedAgent: `{request['routing'].get('requestedAgent', 'n/a')}`",
+        f"- effectiveAgent: `{request['routing'].get('effectiveAgent', 'n/a')}`",
+        f"- reason: {request['routing'].get('reason', 'n/a')}",
+        "",
+        "## Acceptance",
+    ]
+    required = request["task"].get("acceptance", {}).get("required", [])
+    if required:
+        lines.extend(f"- `{item}`" for item in required)
+    else:
+        lines.append("- none")
+    lines.extend(
+        [
+            "",
+            "## Repo Readiness",
+            f"- exists: `{request['repoReadiness']['exists']}`",
+            f"- isGit: `{request['repoReadiness']['isGit']}`",
+            f"- currentBranch: `{request['repoReadiness'].get('currentBranch') or 'n/a'}`",
+            f"- remoteOrigin: `{request['repoReadiness'].get('remoteOrigin') or 'n/a'}`",
+            f"- canExecuteMutations: `{request['repoReadiness']['canExecuteMutations']}`",
+            f"- denyReason: `{request['repoReadiness'].get('denyReason') or 'n/a'}`",
+        ]
+    )
+    dirty_files = request["repoReadiness"].get("dirtyFiles", [])
+    if dirty_files:
+        lines.extend(["", "## Dirty Files"])
+        lines.extend(f"- `{item}`" for item in dirty_files[:20])
+    lines.extend(
+        [
+            "",
+            "## Bridge Contract",
+            "- This artifact is host-side only.",
+            "- It requests internal delivery consumption.",
+            "- Host-side must not mutate the product repository directly in this phase.",
+        ]
+    )
+    return "\n".join(lines) + "\n"
+
+
+def export_delivery_handoff(
+    conn: sqlite3.Connection,
+    *,
+    workspace_root: Path,
+    bridge_dir: Path,
+    issue_id: str | None = None,
+) -> dict[str, Any]:
+    del workspace_root  # Reserved for future repo-local evidence expansion.
+    candidates = [
+        task
+        for task in list_tasks(conn, status="queued")
+        if task["kind"] in {"code_impl", "research"} and task["source"].get("role") == "executor"
+    ]
+    if issue_id:
+        candidates = [task for task in candidates if task.get("issueId") == issue_id]
+    candidates.sort(key=lambda item: (_priority_rank(item["priority"]), item["timestamps"]["createdAt"]))
+    if not candidates:
+        return {"status": "noop", "reason": "no_executor_task_ready"}
+
+    task = candidates[0]
+    bridge_dir = bridge_dir.expanduser().resolve()
+    ensure_dir(bridge_dir)
+    repo = task.get("repo")
+    if repo:
+        repo_readiness = repo_readiness_snapshot(Path(repo))
+    else:
+        repo_readiness = {
+            "repoPath": None,
+            "exists": False,
+            "isGit": False,
+            "currentBranch": None,
+            "remoteOrigin": None,
+            "dirtyFiles": [],
+            "canExecuteMutations": False,
+            "denyReason": "repo_missing",
+        }
+    if not repo_readiness.get("exists") or not repo_readiness.get("isGit"):
+        return {
+            "status": "blocked",
+            "reason": repo_readiness.get("denyReason", "repo_not_ready"),
+            "taskId": task["taskId"],
+            "issueId": task.get("issueId"),
+        }
+
+    request_id = compute_delivery_request_id(task)
+    request = {
+        "requestId": request_id,
+        "createdAt": now_iso(),
+        "status": "pending_internal_consumption",
+        "task": {
+            "taskId": task["taskId"],
+            "issueId": task.get("issueId"),
+            "title": task["title"],
+            "kind": task["kind"],
+            "workflow": task["workflow"],
+            "executionMode": task["executionMode"],
+            "priority": task["priority"],
+            "repo": task.get("repo"),
+            "branch": task.get("branch"),
+            "acceptance": task.get("acceptance", {}),
+        },
+        "routing": {
+            "requestedAgent": task["routing"].get("requestedAgent"),
+            "effectiveAgent": task["routing"].get("effectiveAgent"),
+            "reason": task["routing"].get("reason"),
+        },
+        "repoReadiness": repo_readiness,
+    }
+    json_path = bridge_dir / "delivery-execution-request.json"
+    md_path = bridge_dir / "delivery-execution-request.md"
+    current = load_json(json_path) if json_path.exists() else {}
+    if current.get("requestId") == request_id and current.get("status") == request["status"]:
+        return {
+            "status": "noop",
+            "reason": "request_already_pending",
+            "requestId": request_id,
+            "jsonPath": str(json_path),
+            "mdPath": str(md_path),
+        }
+    dump_json(json_path, request)
+    md_path.write_text(render_delivery_handoff_md(request), encoding="utf-8")
+    return {
+        "status": "ready",
+        "requestId": request_id,
+        "taskId": task["taskId"],
+        "issueId": task.get("issueId"),
+        "jsonPath": str(json_path),
+        "mdPath": str(md_path),
+        "repoCanExecuteMutations": bool(repo_readiness.get("canExecuteMutations")),
+        "repoDenyReason": repo_readiness.get("denyReason"),
+    }
+
+
 def sync_delivery_board(
     conn: sqlite3.Connection,
     *,
@@ -1819,6 +2027,12 @@ def build_parser() -> argparse.ArgumentParser:
     board_parser.add_argument("--sections", default="AUTHORIZED,IN PROGRESS")
     board_parser.add_argument("--allowed-agents", default="gemini")
 
+    handoff_parser = sub.add_parser("export-delivery-handoff", help="Export the next executor-ready delivery task as a host-side handoff artifact")
+    handoff_parser.add_argument("--db", default=str(DEFAULT_DB_PATH))
+    handoff_parser.add_argument("--workspace-root", required=True)
+    handoff_parser.add_argument("--bridge-dir", default=str(DEFAULT_HANDOFFS_DIR))
+    handoff_parser.add_argument("--issue-id", default=None)
+
     envelope_parser = sub.add_parser("envelope", help="Chunk a Telegram message")
     envelope_parser.add_argument("--header", default="[AgentOS]")
     envelope_parser.add_argument("--file", default=None)
@@ -2050,6 +2264,16 @@ def main(argv: list[str] | None = None) -> int:
             )
             _print_json(result)
             return 0
+
+        if args.command == "export-delivery-handoff":
+            result = export_delivery_handoff(
+                conn,
+                workspace_root=Path(args.workspace_root),
+                bridge_dir=Path(args.bridge_dir),
+                issue_id=args.issue_id,
+            )
+            _print_json(result)
+            return 0 if result["status"] in {"ready", "noop"} else 1
 
         if args.command == "supervisor-cycle":
             safe_mode = None

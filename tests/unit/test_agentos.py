@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -378,6 +379,69 @@ class AgentOSTestCase(unittest.TestCase):
         root = agentos.get_task(self.conn, root_task["taskId"])
         self.assertEqual(root["state"]["status"], "blocked")
         self.assertIn("awaiting_executor:", root["state"]["lastBlockerReason"])
+
+    def test_export_delivery_handoff_writes_request_for_clean_repo(self) -> None:
+        repo_dir = self.workspace_root / "projects" / "lf-openalex-enrichment-mvp"
+        repo_dir.mkdir(parents=True)
+        agentos.run_capture(["git", "init", "-b", "main"], repo_dir)
+        agentos.run_capture(["git", "config", "user.name", "Test"], repo_dir)
+        agentos.run_capture(["git", "config", "user.email", "test@example.com"], repo_dir)
+        (repo_dir / "README.md").write_text("demo\n", encoding="utf-8")
+        agentos.run_capture(["git", "add", "README.md"], repo_dir)
+        agentos.run_capture(["git", "commit", "-m", "init"], repo_dir)
+        agentos.run_capture(["git", "remote", "add", "origin", "git@github.com:leandroclf/lf-openalex-enrichment-mvp.git"], repo_dir)
+
+        issue = agentos.DeliveryBoardIssue(
+            section="AUTHORIZED",
+            issue_id="ISSUE-001",
+            title="MVP de Enrichment B2B com OpenAlex",
+            execution_mode="AUTO",
+            owner="builder-repo",
+            workflow="build-mvp",
+            priority="high",
+            repo="https://github.com/leandroclf/lf-openalex-enrichment-mvp",
+        )
+        root_task = agentos.build_issue_task(issue, workspace_root=self.workspace_root, allowed_agents=["gemini"])
+        agentos.enqueue_task(self.conn, root_task)
+        agentos.Supervisor(safe_mode=False).cycle(self.conn)
+
+        bridge_dir = Path(self.temp_dir.name) / "handoffs"
+        result = agentos.export_delivery_handoff(self.conn, workspace_root=self.workspace_root, bridge_dir=bridge_dir)
+        self.assertEqual(result["status"], "ready")
+        request = json.loads((bridge_dir / "delivery-execution-request.json").read_text(encoding="utf-8"))
+        self.assertEqual(request["task"]["issueId"], "ISSUE-001")
+        self.assertTrue(request["repoReadiness"]["canExecuteMutations"])
+
+    def test_export_delivery_handoff_marks_dirty_repo(self) -> None:
+        repo_dir = self.workspace_root / "projects" / "lf-openalex-enrichment-mvp"
+        repo_dir.mkdir(parents=True)
+        agentos.run_capture(["git", "init", "-b", "main"], repo_dir)
+        agentos.run_capture(["git", "config", "user.name", "Test"], repo_dir)
+        agentos.run_capture(["git", "config", "user.email", "test@example.com"], repo_dir)
+        (repo_dir / "README.md").write_text("demo\n", encoding="utf-8")
+        agentos.run_capture(["git", "add", "README.md"], repo_dir)
+        agentos.run_capture(["git", "commit", "-m", "init"], repo_dir)
+        (repo_dir / "dirty.txt").write_text("dirty\n", encoding="utf-8")
+
+        issue = agentos.DeliveryBoardIssue(
+            section="AUTHORIZED",
+            issue_id="ISSUE-001",
+            title="MVP de Enrichment B2B com OpenAlex",
+            execution_mode="AUTO",
+            owner="builder-repo",
+            workflow="build-mvp",
+            priority="high",
+            repo="https://github.com/leandroclf/lf-openalex-enrichment-mvp",
+        )
+        root_task = agentos.build_issue_task(issue, workspace_root=self.workspace_root, allowed_agents=["gemini"])
+        agentos.enqueue_task(self.conn, root_task)
+        agentos.Supervisor(safe_mode=False).cycle(self.conn)
+
+        bridge_dir = Path(self.temp_dir.name) / "handoffs"
+        result = agentos.export_delivery_handoff(self.conn, workspace_root=self.workspace_root, bridge_dir=bridge_dir)
+        self.assertEqual(result["status"], "ready")
+        self.assertFalse(result["repoCanExecuteMutations"])
+        self.assertEqual(result["repoDenyReason"], "repo_dirty")
 
 
 if __name__ == "__main__":

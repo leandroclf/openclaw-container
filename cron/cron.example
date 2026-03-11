@@ -85,3 +85,11 @@
 # === OpenClaw Agent OS Prod idle watchdog execution bridge ===
 # 12 * * * * flock -n /home/leandro/openclaw/runtime/agentos/prod-idle-watchdog-execution.lock env EXECUTION_BRIDGE_MODE=dry-run INTERNAL_WATCHDOG_PRIMARY=true TARGET_CRON_NAME='Autopilot sequential delivery cycle' /home/leandro/openclaw-container/control-plane/scripts/prod_idle_watchdog_execution_bridge_cycle.sh >> /home/leandro/openclaw/logs/agentos-prod-idle-watchdog-execution.log 2>&1
 # === /OpenClaw Agent OS Prod idle watchdog execution bridge ===
+
+# Optional Agent OS production delivery board/queue/handoff blocks.
+# First cut keeps delivery execution as a handoff artifact only.
+#
+# === OpenClaw Agent OS Prod delivery ===
+# 13,43 * * * * flock -n /home/leandro/openclaw/runtime/agentos/prod-delivery-queue.lock /home/leandro/openclaw-container/control-plane/scripts/prod_delivery_queue_cycle.sh >> /home/leandro/openclaw/logs/agentos-prod-delivery-queue.log 2>&1
+# 15,45 * * * * flock -n /home/leandro/openclaw/runtime/agentos/prod-delivery-handoff.lock /home/leandro/openclaw-container/control-plane/scripts/prod_delivery_handoff_cycle.sh >> /home/leandro/openclaw/logs/agentos-prod-delivery-handoff.log 2>&1
+# === /OpenClaw Agent OS Prod delivery ===
