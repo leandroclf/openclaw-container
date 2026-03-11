@@ -962,6 +962,37 @@ def block_task(
     return task
 
 
+def requeue_task(
+    conn: sqlite3.Connection,
+    *,
+    task_id: str,
+    worker_id: str,
+    reason: str,
+    role: str | None = None,
+) -> dict[str, Any]:
+    task = get_task(conn, task_id)
+    if task is None:
+        raise KeyError(f"Unknown task_id: {task_id}")
+    task["state"]["status"] = "queued"
+    task["state"]["leaseOwner"] = None
+    task["state"]["leaseUntil"] = None
+    task["state"]["nextRunAt"] = None
+    task["state"]["lastBlockerType"] = None
+    task["state"]["lastBlockerReason"] = None
+    task["timestamps"]["updatedAt"] = now_iso()
+    _upsert_task(conn, task)
+    _persist_task_snapshot(task)
+    emit_event(
+        conn,
+        event_type="task.retry_scheduled",
+        task=task,
+        payload={"workerId": worker_id, "reason": reason, "nextRunAt": None, "retryInSeconds": 0},
+        role=role,
+    )
+    conn.commit()
+    return task
+
+
 def handoff_task(
     conn: sqlite3.Connection,
     *,
@@ -1257,87 +1288,95 @@ def export_delivery_handoff(
     if not candidates:
         return {"status": "noop", "reason": "no_executor_task_ready"}
 
-    task = candidates[0]
     bridge_dir = bridge_dir.expanduser().resolve()
     ensure_dir(bridge_dir)
-    repo = task.get("repo")
-    if repo:
-        repo_readiness = repo_readiness_snapshot(Path(repo))
-    else:
-        repo_readiness = {
-            "repoPath": None,
-            "exists": False,
-            "isGit": False,
-            "currentBranch": None,
-            "remoteOrigin": None,
-            "dirtyFiles": [],
-            "canExecuteMutations": False,
-            "denyReason": "repo_missing",
-        }
-    if not repo_readiness.get("exists") or not repo_readiness.get("isGit"):
-        return {
-            "status": "blocked",
-            "reason": repo_readiness.get("denyReason", "repo_not_ready"),
-            "taskId": task["taskId"],
-            "issueId": task.get("issueId"),
-        }
-
-    current = load_json(json_path) if (json_path := bridge_dir / "delivery-execution-request.json").exists() else {}
+    json_path = bridge_dir / "delivery-execution-request.json"
+    md_path = bridge_dir / "delivery-execution-request.md"
+    current = load_json(json_path) if json_path.exists() else {}
     current_created_at = parse_timestamp(current.get("createdAt")) if current else None
     current_stale = True
     if current_created_at is not None:
         current_stale = (now_utc() - current_created_at) > timedelta(minutes=30)
 
-    renewal = 0
-    if current.get("task", {}).get("taskId") == task["taskId"] and current.get("status") == "pending_internal_consumption":
-        if not current_stale:
-            md_path = bridge_dir / "delivery-execution-request.md"
-            return {
-                "status": "noop",
-                "reason": "request_already_pending",
-                "requestId": current.get("requestId"),
-                "jsonPath": str(json_path),
-                "mdPath": str(md_path),
+    for task in candidates:
+        repo = task.get("repo")
+        if repo:
+            repo_readiness = repo_readiness_snapshot(Path(repo))
+        else:
+            repo_readiness = {
+                "repoPath": None,
+                "exists": False,
+                "isGit": False,
+                "currentBranch": None,
+                "remoteOrigin": None,
+                "dirtyFiles": [],
+                "canExecuteMutations": False,
+                "denyReason": "repo_missing",
             }
-        renewal = int(current.get("renewal", 0)) + 1
+        if not repo_readiness.get("exists") or not repo_readiness.get("isGit"):
+            block_task(
+                conn,
+                task_id=task["taskId"],
+                worker_id="delivery-handoff-export",
+                blocker_type="SOFT_BLOCKER",
+                reason=repo_readiness.get("denyReason", "repo_not_ready"),
+                role="executor",
+            )
+            continue
 
-    request_id = compute_delivery_request_id(task, renewal=renewal)
-    request = {
-        "requestId": request_id,
-        "createdAt": now_iso(),
-        "renewal": renewal,
-        "status": "pending_internal_consumption",
-        "task": {
+        renewal = 0
+        if current.get("task", {}).get("taskId") == task["taskId"] and current.get("status") == "pending_internal_consumption":
+            if not current_stale:
+                return {
+                    "status": "noop",
+                    "reason": "request_already_pending",
+                    "requestId": current.get("requestId"),
+                    "jsonPath": str(json_path),
+                    "mdPath": str(md_path),
+                }
+            renewal = int(current.get("renewal", 0)) + 1
+
+        request_id = compute_delivery_request_id(task, renewal=renewal)
+        request = {
+            "requestId": request_id,
+            "createdAt": now_iso(),
+            "renewal": renewal,
+            "status": "pending_internal_consumption",
+            "task": {
+                "taskId": task["taskId"],
+                "issueId": task.get("issueId"),
+                "title": task["title"],
+                "kind": task["kind"],
+                "workflow": task["workflow"],
+                "executionMode": task["executionMode"],
+                "priority": task["priority"],
+                "repo": task.get("repo"),
+                "branch": task.get("branch"),
+                "acceptance": task.get("acceptance", {}),
+            },
+            "routing": {
+                "requestedAgent": task["routing"].get("requestedAgent"),
+                "effectiveAgent": task["routing"].get("effectiveAgent"),
+                "reason": task["routing"].get("reason"),
+            },
+            "repoReadiness": repo_readiness,
+        }
+        dump_json(json_path, request)
+        md_path.write_text(render_delivery_handoff_md(request), encoding="utf-8")
+        return {
+            "status": "ready",
+            "requestId": request_id,
             "taskId": task["taskId"],
             "issueId": task.get("issueId"),
-            "title": task["title"],
-            "kind": task["kind"],
-            "workflow": task["workflow"],
-            "executionMode": task["executionMode"],
-            "priority": task["priority"],
-            "repo": task.get("repo"),
-            "branch": task.get("branch"),
-            "acceptance": task.get("acceptance", {}),
-        },
-        "routing": {
-            "requestedAgent": task["routing"].get("requestedAgent"),
-            "effectiveAgent": task["routing"].get("effectiveAgent"),
-            "reason": task["routing"].get("reason"),
-        },
-        "repoReadiness": repo_readiness,
-    }
-    md_path = bridge_dir / "delivery-execution-request.md"
-    dump_json(json_path, request)
-    md_path.write_text(render_delivery_handoff_md(request), encoding="utf-8")
+            "jsonPath": str(json_path),
+            "mdPath": str(md_path),
+            "repoCanExecuteMutations": bool(repo_readiness.get("canExecuteMutations")),
+            "repoDenyReason": repo_readiness.get("denyReason"),
+        }
+
     return {
-        "status": "ready",
-        "requestId": request_id,
-        "taskId": task["taskId"],
-        "issueId": task.get("issueId"),
-        "jsonPath": str(json_path),
-        "mdPath": str(md_path),
-        "repoCanExecuteMutations": bool(repo_readiness.get("canExecuteMutations")),
-        "repoDenyReason": repo_readiness.get("denyReason"),
+        "status": "blocked",
+        "reason": "no_executor_task_ready",
     }
 
 
@@ -1354,6 +1393,12 @@ def sync_delivery_board(
     issues = parse_delivery_board(board_path)
     created: list[dict[str, str]] = []
     skipped: list[dict[str, str]] = []
+    recoverable_blockers = {
+        "repo_dirty",
+        "repo_missing",
+        "agent_result_missing_canonical_output",
+        "Delivery consumer state is not ready.",
+    }
 
     for issue in issues:
         if issue.section not in target_sections:
@@ -1362,6 +1407,30 @@ def sync_delivery_board(
             skipped.append({"issueId": issue.issue_id, "reason": "execution_mode_not_auto"})
             continue
         existing = find_issue_tasks(conn, issue.issue_id)
+        for task in existing:
+            if task["state"]["status"] != "blocked" or task.get("kind") not in {"code_impl", "research"}:
+                continue
+            blocker_reason = task["state"].get("lastBlockerReason")
+            repo = task.get("repo")
+            if not repo:
+                continue
+            if blocker_reason not in recoverable_blockers and "arquivo de handoff" not in (blocker_reason or ""):
+                continue
+            readiness = repo_readiness_snapshot(Path(repo))
+            if not readiness.get("canExecuteMutations"):
+                continue
+            requeue_task(
+                conn,
+                task_id=task["taskId"],
+                worker_id="delivery-board-sync",
+                reason=f"blocker_cleared:{blocker_reason}",
+                role="executor",
+            )
+            skipped.append({"issueId": issue.issue_id, "reason": f"requeued:{task['taskId']}"})
+            existing = find_issue_tasks(conn, issue.issue_id)
+        if any(task["state"]["status"] == "succeeded" for task in existing):
+            skipped.append({"issueId": issue.issue_id, "reason": "issue_already_succeeded"})
+            continue
         active = [task for task in existing if task["state"]["status"] not in {"succeeded", "canceled"}]
         if active:
             skipped.append({"issueId": issue.issue_id, "reason": "active_task_exists"})

@@ -7,12 +7,12 @@ import argparse
 import json
 import re
 import subprocess
+import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 FRESHNESS_LIMIT = timedelta(minutes=45)
 ROOT_DIR = Path(__file__).resolve().parents[1]
-DELIVERY_TEMPLATE_PATH = ROOT_DIR / "control-plane" / "config" / "delivery_executor_message.txt"
 
 
 def parse_timestamp(raw: str | None) -> datetime | None:
@@ -41,11 +41,23 @@ def run_text(cmd: list[str]) -> str:
 
 
 def build_agent_message(request: dict) -> str:
-    template = DELIVERY_TEMPLATE_PATH.read_text(encoding="utf-8").strip()
     task = request.get("task", {})
     handoff_json = json.dumps(request, ensure_ascii=False, indent=2)
     return (
-        f"{template}\n\n"
+        "MODO ENTREGA AGENT OS (executor backend, orientado por handoff canônico).\n\n"
+        "CONTRATO DE ENTRADA:\n"
+        "- Use o JSON embutido abaixo como fonte oficial do handoff.\n"
+        "- Nao dependa de ler arquivos fora do workspace para entender o handoff.\n"
+        "- Trabalhe somente no `issueId`, `repo`, `branch`, `kind`, `workflow` e `acceptance` informados abaixo.\n"
+        "- Nao selecione itens adicionais do kanban neste ciclo.\n\n"
+        "REGRAS OBRIGATORIAS:\n"
+        "- Antes de qualquer diagnostico de acesso, execute `python3 ops/multiagent/delivery/scripts/repo_access_preflight.py`.\n"
+        "- Nao use SSH para operacoes remotas.\n"
+        "- Use HTTPS + token de ambiente via `./bin/git-safe`.\n"
+        "- Trabalhe somente no repositorio indicado pelo handoff.\n"
+        "- Se o repositorio estiver sujo ou fora do esperado, retorne `status=blocked` com causa raiz objetiva.\n"
+        "- Se `kind=code_impl`, a entrega so conta com evidencia real: teste automatizado, commit e PR novo ou atualizado.\n"
+        "- Se `kind=research`, a entrega deve gerar relatorio rastreavel.\n\n"
         "HANDOFF ATUAL:\n"
         f"- requestId: {request.get('requestId')}\n"
         f"- issueId: {task.get('issueId')}\n"
@@ -53,16 +65,13 @@ def build_agent_message(request: dict) -> str:
         f"- branch: {task.get('branch')}\n"
         f"- kind: {task.get('kind')}\n"
         f"- workflow: {task.get('workflow')}\n\n"
-        "IMPORTANTE:\n"
-        "- Se o arquivo de handoff fora do workspace nao puder ser lido diretamente, use o JSON embutido abaixo como fonte oficial.\n"
-        "- Nao bloqueie por falta de acesso ao arquivo de handoff se o JSON abaixo estiver presente.\n\n"
         "JSON DO HANDOFF:\n"
         "```json\n"
         f"{handoff_json}\n"
         "```\n\n"
         "CONTRATO DE RESPOSTA OBRIGATÓRIO:\n"
-        "1. Tente escrever `/home/node/.openclaw/agentos/handoffs/delivery-execution-result.json`.\n"
-        "2. Na resposta final, inclua exatamente um bloco com o marcador `DELIVERY_RESULT_JSON` seguido por JSON válido com:\n"
+        "1. Atualize `ops/multiagent/delivery/daily-summary.md` com issueId, repo, branch, testes, commit/PR e blockers.\n"
+        "2. Na resposta final, retorne somente um JSON valido com:\n"
         "   - requestId\n"
         "   - issueId\n"
         "   - status (`succeeded|blocked|failed`)\n"
@@ -75,8 +84,34 @@ def build_agent_message(request: dict) -> str:
         "   - blockerType\n"
         "   - blockerReason\n"
         "   - updatedAt\n"
-        "3. Se não houver progresso técnico real, retorne `status=blocked` com causa raiz objetiva.\n"
-        "4. Não inclua nenhum outro JSON na resposta final."
+        "3. Nao inclua texto adicional fora desse JSON final."
+    )
+
+
+def build_codex_message(request: dict) -> str:
+    task = request.get("task", {})
+    handoff_json = json.dumps(request, ensure_ascii=False, indent=2)
+    return (
+        "You are the Agent OS delivery executor.\n"
+        "Work only on the handoff below.\n\n"
+        "Rules:\n"
+        "- Use the embedded JSON as the authoritative handoff input.\n"
+        "- Work only in the repo and branch from the handoff.\n"
+        "- Before any remote Git diagnosis, run `python3 /home/leandro/clawd/ops/multiagent/delivery/scripts/repo_access_preflight.py` from `/home/leandro/clawd`.\n"
+        "- Do not use SSH for remote Git operations.\n"
+        "- Use `/home/leandro/clawd/bin/git-safe` for fetch/push/ls-remote.\n"
+        "- If the repo is dirty or the task cannot proceed safely, return `status=blocked` with a concrete blocker reason.\n"
+        "- For `code_impl`, success requires real evidence: automated test + commit + PR created or updated.\n"
+        "- For `research`, success requires a traceable report artifact.\n"
+        "- Update `/home/leandro/clawd/ops/multiagent/delivery/daily-summary.md` with issueId, repo, branch, tests, commit/PR and blockers.\n\n"
+        "Handoff JSON:\n"
+        "```json\n"
+        f"{handoff_json}\n"
+        "```\n\n"
+        "Final response contract:\n"
+        "- Return only valid JSON.\n"
+        "- Fields required: requestId, issueId, status, repo, branch, tests, commit, pr, ciStatus, blockerType, blockerReason, updatedAt.\n"
+        "- Do not include markdown fences or extra commentary."
     )
 
 
@@ -180,9 +215,10 @@ def main() -> None:
     parser.add_argument("--bridge-dir", required=True)
     parser.add_argument("--activate", action="store_true")
     parser.add_argument("--profile", default="prod")
-    parser.add_argument("--backend", choices=["agent", "cron"], default="agent")
+    parser.add_argument("--backend", choices=["agent", "codex", "cron"], default="agent")
     parser.add_argument("--trigger-agent", default="main")
     parser.add_argument("--agent-timeout-seconds", default="1800")
+    parser.add_argument("--codex-model", default="")
     parser.add_argument("--trigger-cron-name", default="Autopilot sequential delivery cycle")
     parser.add_argument("--trigger-cron-id", default=None)
     parser.add_argument("--trigger-timeout-ms", default="900000")
@@ -206,6 +242,7 @@ def main() -> None:
     intent_json_path = bridge_dir / "delivery-execution-intent.json"
     intent_md_path = bridge_dir / "delivery-execution-intent.md"
     agent_output_path = bridge_dir / "delivery-execution-agent-output.json"
+    codex_output_path = bridge_dir / "delivery-execution-codex-output.json"
     result_path = bridge_dir / "delivery-execution-result.json"
 
     now = datetime.now(timezone.utc).replace(microsecond=0)
@@ -308,6 +345,42 @@ def main() -> None:
                             "updatedAt": now.isoformat().replace("+00:00", "Z"),
                         }
                     save_json(result_path, fallback_result)
+            elif args.backend == "codex":
+                trigger_method = "codex exec"
+                side_effect = "run host-approved Codex delivery executor turn"
+                with tempfile.NamedTemporaryFile("w+", delete=False) as handle:
+                    output_last_message = Path(handle.name)
+                command = [
+                    "timeout",
+                    f"{args.agent_timeout_seconds}s",
+                    "codex",
+                    "exec",
+                    "-C",
+                    request["task"].get("repo"),
+                    "--dangerously-bypass-approvals-and-sandbox",
+                    "-o",
+                    str(output_last_message),
+                ]
+                if args.codex_model:
+                    command.extend(["-m", args.codex_model])
+                command.append(build_codex_message(request))
+                trigger_output = run_text(command)
+                codex_last_message = output_last_message.read_text(encoding="utf-8").strip()
+                save_json(
+                    codex_output_path,
+                    {
+                        "stdout": trigger_output,
+                        "lastMessage": codex_last_message,
+                    },
+                )
+                if not result_path.exists():
+                    try:
+                        save_json(result_path, json.loads(codex_last_message))
+                    except json.JSONDecodeError:
+                        save_json(
+                            result_path,
+                            build_blocked_result(request, "codex_result_missing_canonical_output"),
+                        )
             else:
                 trigger_method = f"openclaw cron run {args.trigger_cron_name}"
                 side_effect = "trigger host-approved internal sequential delivery cycle"
@@ -342,6 +415,8 @@ def main() -> None:
         if args.activate and trigger_result == "triggered":
             if args.backend == "agent":
                 final_notes = ["Delivery execution bridge activated and the direct agent executor was triggered."]
+            elif args.backend == "codex":
+                final_notes = ["Delivery execution bridge activated and the Codex executor was triggered."]
             else:
                 final_notes = ["Delivery execution bridge activated and the internal sequential delivery cycle was triggered."]
         elif args.activate:

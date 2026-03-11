@@ -66,7 +66,8 @@ def build_evidence_refs(result: dict, result_path: Path) -> list[str]:
     pr_url = result.get("pr")
     if pr_url:
         refs.append(f"pr:{pr_url}")
-    if result.get("ciStatus") == "pass":
+    ci_status = str(result.get("ciStatus") or "").strip().lower()
+    if ci_status in {"pass", "passed", "success", "succeeded"}:
         refs.append("ci:pass")
     return refs
 
@@ -92,6 +93,8 @@ def reconcile_success(conn, request: dict, result: dict, result_path: Path) -> d
 def reconcile_blocked(conn, request: dict, result: dict) -> dict[str, str]:
     task_id = request["task"]["taskId"]
     blocker_type = result.get("blockerType") or "HARD_BLOCKER"
+    if blocker_type not in agentos.BLOCKER_TYPES:
+        blocker_type = "SOFT_BLOCKER"
     blocker_reason = result.get("blockerReason") or "delivery_execution_blocked"
     agentos.block_task(
         conn,
@@ -183,7 +186,7 @@ def main() -> None:
     try:
         outcome = result.get("status")
         details: dict[str, str]
-        if outcome == "succeeded":
+        if outcome in {"succeeded", "completed"}:
             details = reconcile_success(conn, request, result, result_path)
             status = "succeeded"
         elif outcome == "blocked":
