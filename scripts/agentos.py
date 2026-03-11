@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable
+from urllib.parse import urlparse
 
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
@@ -48,6 +49,7 @@ TASK_STATUSES = {
 BLOCKER_TYPES = {"HARD_BLOCKER", "SOFT_BLOCKER", "HUMAN_BLOCKER"}
 SENSITIVE_KINDS = {"ops_deploy", "runtime_change", "policy_change", "routing_change", "auth_change"}
 CODE_TASK_KINDS = {"code_impl", "code_review", "debug_ci"}
+BOARD_ACTIVE_SECTIONS = {"AUTHORIZED", "IN PROGRESS"}
 EVENT_TYPES = {
     "task.created",
     "task.claimed",
@@ -74,6 +76,20 @@ class ValidationError(ValueError):
     """Raised when a schema-like validation fails."""
 
 
+@dataclass
+class DeliveryBoardIssue:
+    section: str
+    issue_id: str
+    title: str
+    execution_mode: str
+    owner: str | None = None
+    workflow: str = "build-mvp"
+    priority: str = "high"
+    repo: str | None = None
+    branch: str | None = None
+    raw_fields: dict[str, str] | None = None
+
+
 def now_utc() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -94,6 +110,110 @@ def load_json(path: Path) -> dict[str, Any]:
 def dump_json(path: Path, payload: dict[str, Any]) -> None:
     ensure_dir(path.parent)
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
+
+
+def slugify(value: str) -> str:
+    normalized = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
+    return normalized or "task"
+
+
+def derive_issue_branch(issue_id: str, title: str) -> str:
+    return f"feature/{slugify(issue_id)}-{slugify(title)[:48]}".rstrip("-")
+
+
+def infer_issue_workflow(fields: dict[str, str]) -> str:
+    value = fields.get("Workflow", "").strip().lower()
+    if value:
+        return value
+    repo = fields.get("Repo", "").strip()
+    return "build-mvp" if repo else "operate-and-grow"
+
+
+def infer_issue_priority(section: str) -> str:
+    return "high" if section == "AUTHORIZED" else "medium"
+
+
+def normalize_board_section(name: str) -> str:
+    normalized = name.strip().upper()
+    for section in ("TO REVIEW", "AUTHORIZED", "IN PROGRESS", "DONE", "BLOCKED"):
+        if normalized.startswith(section):
+            return section
+    return normalized
+
+
+def resolve_workspace_repo_path(workspace_root: Path, repo_value: str | None) -> str | None:
+    if not repo_value:
+        return None
+    repo_value = repo_value.strip()
+    if not repo_value:
+        return None
+    if repo_value.startswith("http://") or repo_value.startswith("https://") or repo_value.startswith("git@"):
+        repo_name = repo_value.rstrip("/").rsplit("/", 1)[-1]
+        if repo_name.endswith(".git"):
+            repo_name = repo_name[:-4]
+        for candidate in (
+            workspace_root / "projects" / repo_name,
+            workspace_root / repo_name,
+        ):
+            if candidate.exists():
+                return str(candidate)
+    candidate = workspace_root / repo_value
+    if candidate.exists():
+        return str(candidate)
+    return repo_value
+
+
+def parse_delivery_board(board_path: Path) -> list[DeliveryBoardIssue]:
+    current_section: str | None = None
+    current_issue: DeliveryBoardIssue | None = None
+    current_fields: dict[str, str] = {}
+    issues: list[DeliveryBoardIssue] = []
+
+    def flush_current() -> None:
+        nonlocal current_issue, current_fields
+        if current_issue is None:
+            return
+        current_issue.execution_mode = current_fields.get("Execution Mode", current_issue.execution_mode)
+        current_issue.owner = current_fields.get("Owner", current_fields.get("Owner proposto", current_issue.owner))
+        current_issue.workflow = infer_issue_workflow(current_fields)
+        current_issue.priority = infer_issue_priority(current_issue.section)
+        current_issue.repo = current_fields.get("Repo", current_issue.repo)
+        current_issue.branch = current_fields.get("Branch", current_issue.branch)
+        current_issue.raw_fields = dict(current_fields)
+        issues.append(current_issue)
+        current_issue = None
+        current_fields = {}
+
+    for raw_line in board_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.rstrip()
+        section_match = re.match(r"^##\s+(.+)$", line)
+        if section_match:
+            flush_current()
+            current_section = normalize_board_section(section_match.group(1))
+            continue
+
+        issue_match = re.match(r"^- Issue:\s+\[(ISSUE-\d+)\]\s+(.+)$", line)
+        if issue_match:
+            flush_current()
+            if current_section is None:
+                current_section = "UNKNOWN"
+            current_issue = DeliveryBoardIssue(
+                section=current_section,
+                issue_id=issue_match.group(1).strip(),
+                title=issue_match.group(2).strip(),
+                execution_mode="HUMAN",
+            )
+            continue
+
+        if current_issue is None:
+            continue
+
+        field_match = re.match(r"^\s+-\s+([^:]+):\s*(.+)$", line)
+        if field_match:
+            current_fields[field_match.group(1).strip()] = field_match.group(2).strip()
+
+    flush_current()
+    return issues
 
 
 def parse_bool_env(name: str) -> bool | None:
@@ -864,6 +984,10 @@ def handoff_task(
     return event
 
 
+def find_issue_tasks(conn: sqlite3.Connection, issue_id: str) -> list[dict[str, Any]]:
+    return [task for task in list_tasks(conn) if task.get("issueId") == issue_id]
+
+
 @dataclass
 class RoutingDecision:
     objective: str
@@ -966,6 +1090,74 @@ def resolve_routing_plan(
         probe=probe,
     )
     return RoutingPlan(decision=decision, model_router_command=command)
+
+
+def build_issue_task(issue: DeliveryBoardIssue, *, workspace_root: Path, allowed_agents: list[str]) -> dict[str, Any]:
+    resolved_repo = resolve_workspace_repo_path(workspace_root, issue.repo)
+    routing = resolve_routing(kind="planning", allowed_agents=allowed_agents, requested_agent="gemini")
+    task = default_task(
+        kind="planning",
+        title=f"{issue.issue_id}: {issue.title}",
+        workflow=issue.workflow,
+        execution_mode=issue.execution_mode,
+        priority=issue.priority,
+        source={"channel": "board", "boardSection": issue.section},
+        routing=routing.as_dict(),
+        acceptance={"required": ["report"], "ciMustPass": False},
+        issue_id=issue.issue_id,
+        repo=resolved_repo,
+        branch=issue.branch or derive_issue_branch(issue.issue_id, issue.title),
+    )
+    task["correlationId"] = f"board:{issue.issue_id}"
+    task["source"]["owner"] = issue.owner
+    task["source"]["boardTitle"] = issue.title
+    task["source"]["rawFields"] = issue.raw_fields or {}
+    validate_task(task)
+    return task
+
+
+def sync_delivery_board(
+    conn: sqlite3.Connection,
+    *,
+    workspace_root: Path,
+    board_path: Path,
+    sections: set[str] | None = None,
+    allowed_agents: list[str] | None = None,
+) -> dict[str, Any]:
+    target_sections = sections or BOARD_ACTIVE_SECTIONS
+    allowed_agents = allowed_agents or ["gemini"]
+    issues = parse_delivery_board(board_path)
+    created: list[dict[str, str]] = []
+    skipped: list[dict[str, str]] = []
+
+    for issue in issues:
+        if issue.section not in target_sections:
+            continue
+        if issue.execution_mode != "AUTO":
+            skipped.append({"issueId": issue.issue_id, "reason": "execution_mode_not_auto"})
+            continue
+        existing = find_issue_tasks(conn, issue.issue_id)
+        active = [task for task in existing if task["state"]["status"] not in {"succeeded", "canceled"}]
+        if active:
+            skipped.append({"issueId": issue.issue_id, "reason": "active_task_exists"})
+            continue
+        task = build_issue_task(issue, workspace_root=workspace_root, allowed_agents=allowed_agents)
+        enqueue_task(conn, task)
+        created.append(
+            {
+                "issueId": issue.issue_id,
+                "taskId": task["taskId"],
+                "repo": task.get("repo") or "",
+                "workflow": task["workflow"],
+            }
+        )
+
+    return {
+        "boardPath": str(board_path),
+        "sections": sorted(target_sections),
+        "created": created,
+        "skipped": skipped,
+    }
 
 
 def split_telegram_message(
@@ -1339,12 +1531,41 @@ class Supervisor:
         self.docker_runner = docker_runner
         self.shell_runner = shell_runner
         self.planner = Planner()
+        self.executor = Executor()
 
     def should_apply_preflight(self, task: dict[str, Any]) -> bool:
         return task["kind"] in SENSITIVE_KINDS
 
     def derive_follow_up(self, task: dict[str, Any], title: str, kind: str) -> dict[str, Any]:
         return self.planner.derive_task(task, kind=kind, title=title)
+
+    def should_promote_delivery_planning(self, task: dict[str, Any]) -> bool:
+        return task["kind"] == "planning" and task.get("issueId") and task["source"].get("channel") == "board"
+
+    def derive_executor_task(self, task: dict[str, Any]) -> dict[str, Any]:
+        repo = task.get("repo")
+        kind = "code_impl" if repo else "research"
+        routing = resolve_routing(kind=kind, allowed_agents=["gemini"], requested_agent="codex" if kind == "code_impl" else "gemini")
+        derived = default_task(
+            kind=kind,
+            title=f"Execute {task.get('issueId', task['taskId'])}: {task['title']}",
+            workflow=task["workflow"],
+            execution_mode=task["executionMode"],
+            priority=task["priority"],
+            source={**task["source"], "parentTaskId": task["taskId"], "role": self.executor.role},
+            routing=routing.as_dict(),
+            acceptance=(
+                {"required": ["test", "commit", "pr_or_pr_update"], "ciMustPass": True}
+                if kind == "code_impl"
+                else {"required": ["report"], "ciMustPass": False}
+            ),
+            issue_id=task.get("issueId"),
+            repo=repo,
+            branch=task.get("branch"),
+        )
+        derived["correlationId"] = task["correlationId"]
+        validate_task(derived)
+        return derived
 
     def preflight_request(self, task: dict[str, Any]) -> dict[str, Any]:
         request = dict(task.get("preflight", {}))
@@ -1455,6 +1676,33 @@ class Supervisor:
             )
             derived.append(derived_task)
             blocked_ids.append(task["taskId"])
+        planning_candidates = [task for task in queued if self.should_promote_delivery_planning(task)]
+        for task in planning_candidates[: self.max_derived_tasks_per_root]:
+            existing_children = [
+                item for item in list_tasks(conn) if item["source"].get("parentTaskId") == task["taskId"]
+            ]
+            if existing_children:
+                continue
+            derived_task = self.derive_executor_task(task)
+            enqueue_task(conn, derived_task)
+            handoff_task(
+                conn,
+                task=task,
+                from_role=self.planner.role,
+                to_role=self.executor.role,
+                reason="delivery_issue_ready_for_execution",
+                derived_task=derived_task,
+            )
+            block_task(
+                conn,
+                task_id=task["taskId"],
+                worker_id="supervisor",
+                blocker_type="SOFT_BLOCKER",
+                reason=f"awaiting_executor:{derived_task['taskId']}",
+                role="supervisor",
+            )
+            derived.append(derived_task)
+            blocked_ids.append(task["taskId"])
         for task in failed[: self.max_derived_tasks_per_root]:
             block_task(
                 conn,
@@ -1559,6 +1807,17 @@ def build_parser() -> argparse.ArgumentParser:
     workflow_parser.add_argument("--name", required=True)
     workflow_parser.add_argument("--workspace-root", required=True)
     workflow_parser.add_argument("--worker-id", default="workflow-runner")
+
+    board_parser = sub.add_parser("sync-board", help="Sync AUTO delivery issues from workspace board into the queue")
+    board_parser.add_argument("--db", default=str(DEFAULT_DB_PATH))
+    board_parser.add_argument("--workspace-root", required=True)
+    board_parser.add_argument(
+        "--board-path",
+        default="ops/multiagent/delivery/board.md",
+        help="Board path relative to workspace root",
+    )
+    board_parser.add_argument("--sections", default="AUTHORIZED,IN PROGRESS")
+    board_parser.add_argument("--allowed-agents", default="gemini")
 
     envelope_parser = sub.add_parser("envelope", help="Chunk a Telegram message")
     envelope_parser.add_argument("--header", default="[AgentOS]")
@@ -1776,6 +2035,21 @@ def main(argv: list[str] | None = None) -> int:
             )
             _print_json(result)
             return 0 if result["task"]["state"]["status"] == "succeeded" else 1
+
+        if args.command == "sync-board":
+            workspace_root = Path(args.workspace_root)
+            board_path = workspace_root / args.board_path
+            allowed_agents = [item.strip() for item in args.allowed_agents.split(",") if item.strip()]
+            sections = {item.strip() for item in args.sections.split(",") if item.strip()}
+            result = sync_delivery_board(
+                conn,
+                workspace_root=workspace_root,
+                board_path=board_path,
+                sections=sections,
+                allowed_agents=allowed_agents,
+            )
+            _print_json(result)
+            return 0
 
         if args.command == "supervisor-cycle":
             safe_mode = None

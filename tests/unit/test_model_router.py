@@ -59,7 +59,23 @@ class ModelRouterUnitTests(unittest.TestCase):
         )
         expected_base = 9 * 0.5 + 8 * 0.3 + 7 * 0.1 + 6 * 0.1
         self.assertAlmostEqual(details["baseScore"], round(expected_base, 3))
-        self.assertAlmostEqual(final_score, expected_base + 4.0)
+        self.assertAlmostEqual(final_score, expected_base + 3.0)
+
+    def test_build_provider_status_map_accepts_env_backed_openai_provider(self) -> None:
+        payload = {
+            "auth": {
+                "providers": [
+                    {
+                        "provider": "openai",
+                        "effective": {"kind": "env", "detail": "masked"},
+                        "profiles": {"count": 0},
+                    }
+                ],
+                "oauth": {"providers": []},
+            }
+        }
+        result = self.router.build_provider_status_map(payload)
+        self.assertEqual(result["openai"], "ok")
 
     def test_enforce_required_fallbacks_front(self) -> None:
         updated, enforced, notes = self.router.enforce_required_fallbacks(

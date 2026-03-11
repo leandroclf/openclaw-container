@@ -287,6 +287,98 @@ class AgentOSTestCase(unittest.TestCase):
         self.assertEqual(command[1], str(rewritten))
         self.assertIn(str(self.workspace_root), rewritten.read_text(encoding="utf-8"))
 
+    def test_parse_delivery_board_extracts_auto_issue_metadata(self) -> None:
+        board = self.workspace_root / "ops" / "multiagent" / "delivery" / "board.md"
+        board.parent.mkdir(parents=True, exist_ok=True)
+        board.write_text(
+            """
+## AUTHORIZED
+- Issue: [ISSUE-001] MVP de Enrichment B2B com OpenAlex
+  - Execution Mode: AUTO
+  - Owner: builder-repo
+  - Repo: https://github.com/leandroclf/lf-openalex-enrichment-mvp
+
+## TO REVIEW
+- Issue: [ISSUE-900] Exemplo humano
+  - Execution Mode: HUMAN
+  - Owner: reviewer-delivery
+""".strip()
+            + "\n",
+            encoding="utf-8",
+        )
+        issues = agentos.parse_delivery_board(board)
+        self.assertEqual(len(issues), 2)
+        self.assertEqual(issues[0].issue_id, "ISSUE-001")
+        self.assertEqual(issues[0].execution_mode, "AUTO")
+        self.assertEqual(issues[0].owner, "builder-repo")
+
+    def test_sync_delivery_board_enqueues_authorized_auto_issue_once(self) -> None:
+        repo_dir = self.workspace_root / "projects" / "lf-openalex-enrichment-mvp"
+        repo_dir.mkdir(parents=True)
+        board = self.workspace_root / "ops" / "multiagent" / "delivery" / "board.md"
+        board.parent.mkdir(parents=True, exist_ok=True)
+        board.write_text(
+            """
+## AUTHORIZED
+- Issue: [ISSUE-001] MVP de Enrichment B2B com OpenAlex
+  - Execution Mode: AUTO
+  - Owner: builder-repo
+  - Repo: https://github.com/leandroclf/lf-openalex-enrichment-mvp
+""".strip()
+            + "\n",
+            encoding="utf-8",
+        )
+        first = agentos.sync_delivery_board(
+            self.conn,
+            workspace_root=self.workspace_root,
+            board_path=board,
+            sections={"AUTHORIZED"},
+            allowed_agents=["gemini"],
+        )
+        self.assertEqual(len(first["created"]), 1)
+        task = agentos.list_tasks(self.conn)[0]
+        self.assertEqual(task["kind"], "planning")
+        self.assertEqual(task["issueId"], "ISSUE-001")
+        self.assertEqual(task["repo"], str(repo_dir))
+
+        second = agentos.sync_delivery_board(
+            self.conn,
+            workspace_root=self.workspace_root,
+            board_path=board,
+            sections={"AUTHORIZED"},
+            allowed_agents=["gemini"],
+        )
+        self.assertEqual(len(second["created"]), 0)
+        self.assertEqual(second["skipped"][0]["reason"], "active_task_exists")
+
+    def test_supervisor_promotes_board_planning_to_executor_task(self) -> None:
+        repo_dir = self.workspace_root / "projects" / "lf-openalex-enrichment-mvp"
+        repo_dir.mkdir(parents=True)
+        issue = agentos.DeliveryBoardIssue(
+            section="AUTHORIZED",
+            issue_id="ISSUE-001",
+            title="MVP de Enrichment B2B com OpenAlex",
+            execution_mode="AUTO",
+            owner="builder-repo",
+            workflow="build-mvp",
+            priority="high",
+            repo="https://github.com/leandroclf/lf-openalex-enrichment-mvp",
+        )
+        root_task = agentos.build_issue_task(issue, workspace_root=self.workspace_root, allowed_agents=["gemini"])
+        agentos.enqueue_task(self.conn, root_task)
+
+        supervisor = agentos.Supervisor(safe_mode=False)
+        result = supervisor.cycle(self.conn)
+        self.assertEqual(result.action, "processed_sensitive_queue")
+        executor_tasks = [item for item in agentos.list_tasks(self.conn) if item["kind"] == "code_impl"]
+        self.assertEqual(len(executor_tasks), 1)
+        self.assertEqual(executor_tasks[0]["issueId"], "ISSUE-001")
+        self.assertEqual(executor_tasks[0]["acceptance"]["ciMustPass"], True)
+
+        root = agentos.get_task(self.conn, root_task["taskId"])
+        self.assertEqual(root["state"]["status"], "blocked")
+        self.assertIn("awaiting_executor:", root["state"]["lastBlockerReason"])
+
 
 if __name__ == "__main__":
     unittest.main()
