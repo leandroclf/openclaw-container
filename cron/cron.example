@@ -93,3 +93,20 @@
 # 13,43 * * * * flock -n /home/leandro/openclaw/runtime/agentos/prod-delivery-queue.lock /home/leandro/openclaw-container/control-plane/scripts/prod_delivery_queue_cycle.sh >> /home/leandro/openclaw/logs/agentos-prod-delivery-queue.log 2>&1
 # 15,45 * * * * flock -n /home/leandro/openclaw/runtime/agentos/prod-delivery-handoff.lock /home/leandro/openclaw-container/control-plane/scripts/prod_delivery_handoff_cycle.sh >> /home/leandro/openclaw/logs/agentos-prod-delivery-handoff.log 2>&1
 # === /OpenClaw Agent OS Prod delivery ===
+
+# Optional Agent OS production delivery consumer/execution blocks.
+# First cut keeps execution in dry-run; after cutover switch to activate mode and
+# disable the internal sequential delivery schedule.
+#
+# === OpenClaw Agent OS Prod delivery execution ===
+# 17,47 * * * * flock -n /home/leandro/openclaw/runtime/agentos/prod-delivery-consumer.lock /home/leandro/openclaw-container/control-plane/scripts/prod_delivery_handoff_consumer_cycle.sh >> /home/leandro/openclaw/logs/agentos-prod-delivery-consumer.log 2>&1
+# 19,49 * * * * flock -n /home/leandro/openclaw/runtime/agentos/prod-delivery-execution.lock env EXECUTION_BRIDGE_MODE=activate INTERNAL_DELIVERY_PRIMARY=false ALLOW_DISABLED_CRON=true TARGET_CRON_NAME='Autopilot sequential delivery cycle' TARGET_CRON_ID='e6d5079d-3eaa-46fa-ac4a-4f77add89b18' /home/leandro/openclaw-container/control-plane/scripts/prod_delivery_execution_bridge_cycle.sh >> /home/leandro/openclaw/logs/agentos-prod-delivery-execution.log 2>&1
+# === /OpenClaw Agent OS Prod delivery execution ===
+
+# Optional Agent OS production delivery reconcile block.
+# Consumes `delivery-execution-result.json` and reconciles task state in the
+# Agent OS queue.
+#
+# === OpenClaw Agent OS Prod delivery reconcile ===
+# 21,51 * * * * flock -n /home/leandro/openclaw/runtime/agentos/prod-delivery-reconcile.lock /home/leandro/openclaw-container/control-plane/scripts/prod_delivery_reconcile_cycle.sh >> /home/leandro/openclaw/logs/agentos-prod-delivery-reconcile.log 2>&1
+# === /OpenClaw Agent OS Prod delivery reconcile ===

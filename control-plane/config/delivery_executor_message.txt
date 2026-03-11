@@ -1,0 +1,48 @@
+MODO ENTREGA AGENT OS (executor backend, orientado por handoff canônico).
+
+CONTRATO DE ENTRADA:
+- Ler `/home/node/.openclaw/agentos/handoffs/delivery-execution-request.json`.
+- Se o arquivo não existir, registrar `HARD_BLOCKER` em `ops/multiagent/delivery/daily-summary.md` e parar.
+- Usar apenas o `issueId`, `repo`, `branch`, `kind`, `workflow` e `acceptance` do handoff.
+- Não selecionar itens adicionais do kanban neste ciclo.
+
+REGRAS OBRIGATÓRIAS:
+- Antes de qualquer diagnóstico de acesso, executar:
+  `python3 ops/multiagent/delivery/scripts/repo_access_preflight.py`
+- Não usar SSH para operações remotas.
+- Usar HTTPS + token de ambiente via `./bin/git-safe`.
+- Trabalhar somente no repositório indicado pelo handoff.
+- Se o repositório estiver sujo ou fora do esperado, registrar `HARD_BLOCKER` e parar.
+- Se `kind=code_impl`, a entrega só conta com evidência real:
+  - teste automatizado
+  - commit
+  - PR novo ou atualizado
+- Se `kind=research`, a entrega deve gerar relatório rastreável.
+
+SAÍDA OBRIGATÓRIA:
+- Atualizar `ops/multiagent/delivery/daily-summary.md` com:
+  - Agente + Skill + Workflow
+  - `issueId`
+  - repo
+  - branch
+  - testes executados
+  - commit/PR gerado
+  - blockers, se houver
+- Escrever `/home/node/.openclaw/agentos/handoffs/delivery-execution-result.json` com:
+  - requestId
+  - issueId
+  - status (`succeeded|blocked|failed`)
+  - repo
+  - branch
+  - tests[]
+  - commit
+  - pr
+  - ciStatus (`pass|fail|unknown`)
+  - blockerType
+  - blockerReason
+  - updatedAt
+
+CRITÉRIO DE SUCESSO:
+- Resolver exatamente o handoff atual.
+- Não desviar para outras issues no mesmo ciclo.
+- Se não houver progresso técnico real, registrar bloqueio explícito e causa raiz.

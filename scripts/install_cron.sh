@@ -24,6 +24,12 @@ PROD_IDLE_WATCHDOG_POLICY_SCHEDULE="${PROD_IDLE_WATCHDOG_POLICY_SCHEDULE:-9 * * 
 PROD_IDLE_WATCHDOG_HANDOFF_SCHEDULE="${PROD_IDLE_WATCHDOG_HANDOFF_SCHEDULE:-10 * * * *}"
 PROD_IDLE_WATCHDOG_CONSUMER_SCHEDULE="${PROD_IDLE_WATCHDOG_CONSUMER_SCHEDULE:-11 * * * *}"
 PROD_IDLE_WATCHDOG_EXECUTION_SCHEDULE="${PROD_IDLE_WATCHDOG_EXECUTION_SCHEDULE:-12 * * * *}"
+PROD_DELIVERY_QUEUE_SCHEDULE="${PROD_DELIVERY_QUEUE_SCHEDULE:-13,43 * * * *}"
+PROD_DELIVERY_HANDOFF_SCHEDULE="${PROD_DELIVERY_HANDOFF_SCHEDULE:-15,45 * * * *}"
+PROD_DELIVERY_CONSUMER_SCHEDULE="${PROD_DELIVERY_CONSUMER_SCHEDULE:-17,47 * * * *}"
+PROD_DELIVERY_EXECUTION_SCHEDULE="${PROD_DELIVERY_EXECUTION_SCHEDULE:-19,49 * * * *}"
+PROD_DELIVERY_RECONCILE_SCHEDULE="${PROD_DELIVERY_RECONCILE_SCHEDULE:-21,51 * * * *}"
+SEQUENTIAL_DELIVERY_CRON_ID="${SEQUENTIAL_DELIVERY_CRON_ID:-e6d5079d-3eaa-46fa-ac4a-4f77add89b18}"
 
 mkdir -p "$OPENCLAW_HOME/config" "$OPENCLAW_HOME/logs"
 
@@ -49,6 +55,9 @@ sed -i '/^# === OpenClaw Agent OS Prod idle watchdog policy ===$/,/^# === \/Open
 sed -i '/^# === OpenClaw Agent OS Prod idle watchdog handoff bridge ===$/,/^# === \/OpenClaw Agent OS Prod idle watchdog handoff bridge ===$/d' "$tmp"
 sed -i '/^# === OpenClaw Agent OS Prod idle watchdog handoff consumer ===$/,/^# === \/OpenClaw Agent OS Prod idle watchdog handoff consumer ===$/d' "$tmp"
 sed -i '/^# === OpenClaw Agent OS Prod idle watchdog execution bridge ===$/,/^# === \/OpenClaw Agent OS Prod idle watchdog execution bridge ===$/d' "$tmp"
+sed -i '/^# === OpenClaw Agent OS Prod delivery ===$/,/^# === \/OpenClaw Agent OS Prod delivery ===$/d' "$tmp"
+sed -i '/^# === OpenClaw Agent OS Prod delivery execution ===$/,/^# === \/OpenClaw Agent OS Prod delivery execution ===$/d' "$tmp"
+sed -i '/^# === OpenClaw Agent OS Prod delivery reconcile ===$/,/^# === \/OpenClaw Agent OS Prod delivery reconcile ===$/d' "$tmp"
 
 cat >> "$tmp" <<EOF
 # === OpenClaw container ops ===
@@ -85,6 +94,17 @@ $PROD_IDLE_WATCHDOG_CONSUMER_SCHEDULE flock -n $OPENCLAW_HOME/runtime/agentos/pr
 # === OpenClaw Agent OS Prod idle watchdog execution bridge ===
 $PROD_IDLE_WATCHDOG_EXECUTION_SCHEDULE flock -n $OPENCLAW_HOME/runtime/agentos/prod-idle-watchdog-execution.lock env EXECUTION_BRIDGE_MODE=activate INTERNAL_WATCHDOG_PRIMARY=false TARGET_CRON_NAME=Autopilot\\ sequential\\ delivery\\ cycle $ROOT_DIR/control-plane/scripts/prod_idle_watchdog_execution_bridge_cycle.sh >> $OPENCLAW_HOME/logs/agentos-prod-idle-watchdog-execution.log 2>&1
 # === /OpenClaw Agent OS Prod idle watchdog execution bridge ===
+# === OpenClaw Agent OS Prod delivery ===
+$PROD_DELIVERY_QUEUE_SCHEDULE flock -n $OPENCLAW_HOME/runtime/agentos/prod-delivery-queue.lock $ROOT_DIR/control-plane/scripts/prod_delivery_queue_cycle.sh >> $OPENCLAW_HOME/logs/agentos-prod-delivery-queue.log 2>&1
+$PROD_DELIVERY_HANDOFF_SCHEDULE flock -n $OPENCLAW_HOME/runtime/agentos/prod-delivery-handoff.lock $ROOT_DIR/control-plane/scripts/prod_delivery_handoff_cycle.sh >> $OPENCLAW_HOME/logs/agentos-prod-delivery-handoff.log 2>&1
+# === /OpenClaw Agent OS Prod delivery ===
+# === OpenClaw Agent OS Prod delivery execution ===
+$PROD_DELIVERY_CONSUMER_SCHEDULE flock -n $OPENCLAW_HOME/runtime/agentos/prod-delivery-consumer.lock $ROOT_DIR/control-plane/scripts/prod_delivery_handoff_consumer_cycle.sh >> $OPENCLAW_HOME/logs/agentos-prod-delivery-consumer.log 2>&1
+$PROD_DELIVERY_EXECUTION_SCHEDULE flock -n $OPENCLAW_HOME/runtime/agentos/prod-delivery-execution.lock env EXECUTION_BRIDGE_MODE=activate INTERNAL_DELIVERY_PRIMARY=false ALLOW_DISABLED_CRON=true TARGET_CRON_NAME=Autopilot\\ sequential\\ delivery\\ cycle TARGET_CRON_ID=$SEQUENTIAL_DELIVERY_CRON_ID $ROOT_DIR/control-plane/scripts/prod_delivery_execution_bridge_cycle.sh >> $OPENCLAW_HOME/logs/agentos-prod-delivery-execution.log 2>&1
+# === /OpenClaw Agent OS Prod delivery execution ===
+# === OpenClaw Agent OS Prod delivery reconcile ===
+$PROD_DELIVERY_RECONCILE_SCHEDULE flock -n $OPENCLAW_HOME/runtime/agentos/prod-delivery-reconcile.lock $ROOT_DIR/control-plane/scripts/prod_delivery_reconcile_cycle.sh >> $OPENCLAW_HOME/logs/agentos-prod-delivery-reconcile.log 2>&1
+# === /OpenClaw Agent OS Prod delivery reconcile ===
 EOF
 
 crontab "$tmp"
