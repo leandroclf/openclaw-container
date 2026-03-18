@@ -57,17 +57,17 @@ soon as the provider layer starts exposing them.
 
 ## Routing decisions applied
 
-- Keep `gemini-2.5-flash` as the daily balanced primary.
-- Prefer cheaper OpenAI API models in routing:
-  - `gpt-4.1-nano` for `cost_optimized` subagents
-  - `gpt-4.1-mini` as a stronger low-cost coding subagent
+- Prefer the cheapest supported low-cost chain for background work:
+  - `openai/gpt-4.1-nano` remains the cheapest stable runtime primary for `cost_optimized`
+  - `google-gemini-cli/gemini-2.5-flash-lite` is the Gemini-fast target for subagents whenever the provider exposes it
+  - `openai/gpt-5-mini` is now kept in the fallback chain as the cheaper OpenAI mini target when available
 - Increase fallback depth from `2` to `3` for quality-sensitive objectives.
 - Preserve `openai-codex/gpt-5.3-codex` as enforced rescue fallback.
 
 ## Practical result
 
 - Routine cron/ops work shifts toward cheaper models.
-- Balanced day mode keeps large-context Gemini Flash first.
+- Balanced day mode is now prepared for Gemini Flash-Lite subagents.
 - Coding still retains Codex fallback when quality is needed.
 - The router is future-ready for `GPT-5 mini` and Gemini Flash-Lite once
   OpenClaw exposes them in `models list`.

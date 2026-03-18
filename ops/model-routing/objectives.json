@@ -8,6 +8,8 @@
   },
   "constraints": {
     "ensureFallbackModels": [
+      "openai/gpt-5-mini",
+      "google-gemini-cli/gemini-2.5-flash-lite",
       "openai-codex/gpt-5.3-codex"
     ],
     "ensureFallbackPosition": "append",
@@ -36,7 +38,7 @@
       "runtimeTuning": {
         "maxConcurrent": 2,
         "subagentsMaxConcurrent": 3,
-        "subagentsModel": "google-gemini-cli/gemini-2.5-flash",
+        "subagentsModel": "google-gemini-cli/gemini-2.5-flash-lite",
         "contextPruningMode": "cache-ttl",
         "contextPruningTTL": "45m"
       },
@@ -61,7 +63,7 @@
       "runtimeTuning": {
         "maxConcurrent": 2,
         "subagentsMaxConcurrent": 2,
-        "subagentsModel": "openai/gpt-4.1-mini",
+        "subagentsModel": "openai/gpt-5-mini",
         "contextPruningMode": "cache-ttl",
         "contextPruningTTL": "35m"
       },
@@ -86,7 +88,7 @@
       "runtimeTuning": {
         "maxConcurrent": 2,
         "subagentsMaxConcurrent": 2,
-        "subagentsModel": "google-gemini-cli/gemini-2.5-flash",
+        "subagentsModel": "google-gemini-cli/gemini-2.5-flash-lite",
         "contextPruningMode": "cache-ttl",
         "contextPruningTTL": "30m"
       },
@@ -111,7 +113,7 @@
       "runtimeTuning": {
         "maxConcurrent": 2,
         "subagentsMaxConcurrent": 2,
-        "subagentsModel": "google-gemini-cli/gemini-2.5-flash",
+        "subagentsModel": "google-gemini-cli/gemini-2.5-flash-lite",
         "contextPruningMode": "cache-ttl",
         "contextPruningTTL": "30m"
       },

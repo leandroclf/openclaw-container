@@ -39,9 +39,9 @@ Reduzir consumo de tokens sem perder qualidade, combinando:
 
 ### 2) Objetivos com guardrails de custo
 Arquivo: `ops/model-routing/objectives.json`
-- `balanced_default`: fallback menor + concorrencia moderada.
-- `coding_quality`: modo manual sob demanda (nao modo padrao o dia inteiro).
-- `cost_optimized`: concorrencia minima e contexto mais curto para rotinas/cron.
+- `balanced_default`: usa `gemini-2.5-flash-lite` para subagentes quando disponivel, com concorrencia moderada.
+- `coding_quality`: usa `gpt-5-mini` como subagente barato para tarefas de codigo.
+- `cost_optimized`: concorrencia minima e contexto mais curto para rotinas/cron, priorizando `gpt-4.1-nano`.
 
 ### 3) Cron com prioridade em estabilidade/custo
 Arquivo: `cron/cron.example`
@@ -71,9 +71,9 @@ docker exec openclaw openclaw --profile prod models status --probe
 ```
 
 ## Estrategia de uso para nao estourar cota
-1. **Default fixo em balanced_default**.
-2. **Ativar coding_quality apenas por janela curta** (ex.: durante debugging pesado).
-3. **Retornar para cost_optimized fora do horario de pico**.
+1. **Default fixo em balanced_default** com subagentes em `gemini-2.5-flash-lite` quando disponivel.
+2. **Ativar coding_quality apenas por janela curta** e manter `gpt-5-mini` como subagente barato.
+3. **Retornar para cost_optimized fora do horario de pico** com `gpt-4.1-nano` como cadeia minima.
 4. **Manter subagentes em modelo economico** para tarefas paralelas.
 5. **Revisar `last-recommendation.json` semanalmente** e reajustar pesos.
 
