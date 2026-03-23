@@ -1,0 +1,93 @@
+{
+  "last_updated_utc": "2026-03-20T17:24:12.555427+00:00",
+  "owner": "leandroclf",
+  "repositories": {
+    "lf-openalex-enrichment-mvp": {
+      "owner": "leandroclf",
+      "latestRun": {
+        "id": 22952005878,
+        "status": "completed",
+        "conclusion": "success",
+        "commitSha": "369350fed4cba6d0cf0743dae27ff1ac66446e8d",
+        "commitMessage": "feat(issue-001): add openalex enrichment workflow",
+        "html_url": "https://github.com/leandroclf/lf-openalex-enrichment-mvp/actions/runs/22952005878",
+        "logs_url": "https://api.github.com/repos/leandroclf/lf-openalex-enrichment-mvp/actions/runs/22952005878/logs",
+        "run_number": 18,
+        "created_at": "2026-03-11T12:13:43Z",
+        "updated_at": "2026-03-11T12:14:00Z"
+      },
+      "error": null,
+      "consecutiveFailures": 0,
+      "aggregatedStatus": "green"
+    },
+    "lf-wikidata-entity-graph": {
+      "owner": "leandroclf",
+      "latestRun": {
+        "id": 22952421242,
+        "status": "completed",
+        "conclusion": "success",
+        "commitSha": "408f6f832e4690812ab94acd39b534ef1c127494",
+        "commitMessage": "feat(issue-002): build entity graph payload",
+        "html_url": "https://github.com/leandroclf/lf-wikidata-entity-graph/actions/runs/22952421242",
+        "logs_url": "https://api.github.com/repos/leandroclf/lf-wikidata-entity-graph/actions/runs/22952421242/logs",
+        "run_number": 20,
+        "created_at": "2026-03-11T12:24:39Z",
+        "updated_at": "2026-03-11T12:24:53Z"
+      },
+      "error": null,
+      "consecutiveFailures": 0,
+      "aggregatedStatus": "green"
+    },
+    "lf-worldbank-risk-pricing": {
+      "owner": "leandroclf",
+      "latestRun": {
+        "id": 22952687772,
+        "status": "completed",
+        "conclusion": "success",
+        "commitSha": "27125999630ec291500689bb8d52336823b76237",
+        "commitMessage": "test(issue-003): make pytest run from clean checkout",
+        "html_url": "https://github.com/leandroclf/lf-worldbank-risk-pricing/actions/runs/22952687772",
+        "logs_url": "https://api.github.com/repos/leandroclf/lf-worldbank-risk-pricing/actions/runs/22952687772/logs",
+        "run_number": 20,
+        "created_at": "2026-03-11T12:31:27Z",
+        "updated_at": "2026-03-11T12:31:41Z"
+      },
+      "error": null,
+      "consecutiveFailures": 0,
+      "aggregatedStatus": "green"
+    },
+    "site-lf-solucoes": {
+      "owner": "leandroclf",
+      "latestRun": {
+        "id": 22954094007,
+        "status": "completed",
+        "conclusion": "success",
+        "commitSha": "81d6f8d66351d7e20660a753395b2794a4acbdf8",
+        "commitMessage": "docs(issue-008): add JTBD funnel reference",
+        "html_url": "https://github.com/leandroclf/site-lf-solucoes/actions/runs/22954094007",
+        "logs_url": "https://api.github.com/repos/leandroclf/site-lf-solucoes/actions/runs/22954094007/logs",
+        "run_number": 148,
+        "created_at": "2026-03-11T13:07:37Z",
+        "updated_at": "2026-03-11T13:07:59Z"
+      },
+      "error": null,
+      "consecutiveFailures": 0,
+      "aggregatedStatus": "green"
+    },
+    "openclaw-workspace": {
+      "owner": "leandroclf",
+      "latestRun": null,
+      "error": {
+        "type": "no_runs",
+        "details": "No workflow runs found."
+      },
+      "consecutiveFailures": 0,
+      "aggregatedStatus": "yellow"
+    }
+  },
+  "regressionWatchdog": {
+    "status": "red",
+    "findings": 1,
+    "report": "ops/multiagent/delivery/ci-regression-watchdog.json"
+  }
+}
