@@ -269,6 +269,13 @@ Acceptance:
    - product commit velocity (48h window)
    - stale repo detection
 4. Propose Phase 1 canonicalization as the next low-risk investment.
+5. Bootstrap ClawTeam as the workspace orchestrator layer:
+   - create `~/.clawteam/templates/openclaw-workspace.toml`
+   - use `orchestrator` as the leader and keep specialist roles explicit
+   - launch the meta-team at the workspace root first
+   - create per-repo teams only after canonical product repo paths are confirmed
+6. Keep `openclaw-container` as the runtime reference for versioning, model
+   routing, and blue/green candidate validation before promotion.
 
 ## 10) File map (quick reference)
 
@@ -281,3 +288,4 @@ Acceptance:
 - Access preflight: `ops/multiagent/delivery/scripts/repo_access_preflight.py`
 - Repo boundary guard: `bin/git-safe`
 - Skills governance: `ops/skills-governance/README.md`
+- ClawTeam bootstrap template: `~/.clawteam/templates/openclaw-workspace.toml`

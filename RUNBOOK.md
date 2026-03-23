@@ -88,6 +88,10 @@ docker exec openclaw openclaw --profile prod config set channels.telegram.botTok
 docker exec openclaw openclaw --profile prod config set agents.defaults.model.primary google-gemini-cli/gemini-2.5-flash
 docker exec openclaw openclaw --profile prod config set agents.defaults.model.fallbacks '["google-gemini-cli/gemini-2.5-pro","anthropic/claude-sonnet-4-5","openai-codex/gpt-5.3-codex"]'
 ```
+Canonical note:
+- `~/openclaw/data/openclaw.json` is the runtime source of truth.
+- `~/openclaw/config/config.yaml` may lag behind the live runtime; if it is
+  used operationally, synchronize it explicitly before rollout.
 
 ## 8) Configure OpenAI Codex OAuth
 ```bash
@@ -131,8 +135,8 @@ Installed schedules:
 - `*/15 * * * *` healthcheck + optional Telegram alert.
 - `0 3 * * 0` weekly backup.
 - `30 3 * * *` daily rebuild/restart/update.
-- `45 3 * * *` model routing baseline (`balanced_default`) after update.
-- `5 8 * * 1-5` model routing for business hours (`coding_quality`).
+- `45 3 * * *` model routing baseline (`cost_optimized`) after update.
+- `5 8 * * 1-5` model routing for business hours (`balanced_default`).
 - `5 20 * * *` model routing for off-hours (`cost_optimized`).
 - `15 4 * * *` log pruning/compression.
 

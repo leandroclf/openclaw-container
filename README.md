@@ -96,6 +96,9 @@ For strict production change guardrails and parallel deployment, see:
 - `./scripts/restart.sh` restart + health
 - `./scripts/sync_runtime_config.sh` copy `~/openclaw/data/openclaw.json` into
   the runtime state paths expected by current OpenClaw releases
+- Canonical runtime config lives in `~/openclaw/data/openclaw.json`; treat
+  `~/openclaw/config/config.yaml` as a legacy host-side surface unless you
+  explicitly synchronize it before a rollout.
 - `./scripts/healthcheck.sh` gateway health + channel probe with retries
 - `./scripts/daily_maintenance.sh` daily safe maintenance with auto-recovery checks + secrets placeholder policy audit
 - `./scripts/check_secret_placeholders.py` validate that sensitive config paths use `${VAR}` placeholders (no literal secrets/SecretRef objects)
@@ -132,7 +135,7 @@ Quick examples:
 ```
 
 `./scripts/install_cron.sh` applies three automatic routing windows:
-- baseline after daily update (`balanced_default`)
+- baseline after daily update (`cost_optimized`)
 - business hours (`balanced_default`)
 - off-hours (`cost_optimized`)
 
