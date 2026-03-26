@@ -167,10 +167,12 @@ npm view openclaw dist-tags --json
 for stability.
 
 ### 12.1) Efficiency upgrades from 2026.3.24
-- If the host has the OpenClaw CLI installed, prefer `OPENCLAW_CONTAINER=openclaw openclaw ...` for repeated inspection commands instead of hand-writing `docker exec ...` each time.
 - Use `/v1/models` and `/v1/embeddings` when integrating tools that expect OpenAI-compatible discovery or embedding endpoints.
 - Treat the new "Available Right Now" tool visibility in the Control UI as the fastest way to decide whether to ask the agent for code, research, or a different specialist.
 - Keep the stale `google-gemini-cli-auth` entry out of `openclaw.json` and the example config; the release removes it and logs a warning when it is left behind.
+
+Policy note:
+- This environment stays Docker-only. Do not install or rely on a host-side OpenClaw CLI for privileged operations; keep access centralized in the container and use `docker exec`, compose, or container-managed scripts.
 
 ## 13) Change alert target to another Telegram user/chat
 1. Set new ID in `~/openclaw/config/alerts.env`:
