@@ -166,6 +166,12 @@ npm view openclaw dist-tags --json
 `beta` can be newer than `latest`; this setup intentionally follows `latest`
 for stability.
 
+### 12.1) Efficiency upgrades from 2026.3.24
+- If the host has the OpenClaw CLI installed, prefer `OPENCLAW_CONTAINER=openclaw openclaw ...` for repeated inspection commands instead of hand-writing `docker exec ...` each time.
+- Use `/v1/models` and `/v1/embeddings` when integrating tools that expect OpenAI-compatible discovery or embedding endpoints.
+- Treat the new "Available Right Now" tool visibility in the Control UI as the fastest way to decide whether to ask the agent for code, research, or a different specialist.
+- Keep the stale `google-gemini-cli-auth` entry out of `openclaw.json` and the example config; the release removes it and logs a warning when it is left behind.
+
 ## 13) Change alert target to another Telegram user/chat
 1. Set new ID in `~/openclaw/config/alerts.env`:
    - `ALERT_TELEGRAM_TARGET=<new_user_or_chat_id>`
@@ -191,6 +197,12 @@ npm view @anthropic-ai/claude-code version
 # VS Code extension from WSL
 "/mnt/c/Users/<WINDOWS_USER>/AppData/Local/Programs/Microsoft VS Code/bin/code" \
   --install-extension openai.chatgpt --force
+
+# OpenClaw CLI on the host (targets the running container)
+npm install -g --prefix ~/.local openclaw@latest
+export OPENCLAW_CONTAINER=openclaw
+openclaw --version
+openclaw --profile prod gateway health
 ```
 
 ## 15) Objective-based model routing (quality + cost)

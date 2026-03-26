@@ -5,6 +5,12 @@ running OpenClaw 24/7 inside WSL (Ubuntu-24.04).
 
 ## Quick start
 
+### What the 2026.3.24 release adds for this stack
+- `--container` and `OPENCLAW_CONTAINER` now let host-side CLI calls target the live container directly, which removes repetitive `docker exec` boilerplate when the CLI is installed on the host.
+- `/v1/models` and `/v1/embeddings` are now exposed, so external tools that expect OpenAI-compatible discovery or embedding endpoints can integrate more cleanly.
+- `/tools` and the Control UI now show what the current agent can actually use right now, which makes it easier to pick the right capability before starting work.
+- Media/file dispatch and update preflights are safer, which reduces surprise breakage during automation and upgrades.
+
 ### 1) Build the image (legacy builder only)
 ```bash
 DOCKER_BUILDKIT=0 docker build --build-arg OPENCLAW_VERSION=latest -t openclaw-secure:latest .

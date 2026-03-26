@@ -151,9 +151,6 @@
     "entries": {
       "telegram": {
         "enabled": true
-      },
-      "google-gemini-cli-auth": {
-        "enabled": true
       }
     }
   }
