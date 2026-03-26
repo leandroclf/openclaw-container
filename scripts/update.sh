@@ -76,5 +76,7 @@ fi
 "$ROOT_DIR/scripts/healthcheck.sh"
 
 # Keep browser automation in managed OpenClaw mode (no extension dependency).
-docker exec "$CONTAINER" openclaw --profile "$PROFILE" browser create-profile --name openclaw-auto --driver openclaw >/dev/null 2>&1 || true
+if ! docker exec "$CONTAINER" openclaw --profile "$PROFILE" browser profiles 2>/dev/null | grep -q '^openclaw-auto:'; then
+  docker exec "$CONTAINER" openclaw --profile "$PROFILE" browser create-profile --name openclaw-auto --driver openclaw >/dev/null 2>&1 || true
+fi
 docker exec "$CONTAINER" openclaw --profile "$PROFILE" config set browser.defaultProfile openclaw-auto >/dev/null

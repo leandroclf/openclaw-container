@@ -62,6 +62,7 @@ docker exec openclaw openclaw --profile prod browser --browser-profile openclaw-
 ```
 If `create-profile` returns "already exists", continue with the next command.
 Keep profile `chrome` only for optional manual extension takeover.
+`scripts/update.sh` now checks whether `openclaw-auto` already exists before trying to create it, so routine updates stay quieter.
 
 ## Secrets
 - Use `~/openclaw/.env` for all secrets.
