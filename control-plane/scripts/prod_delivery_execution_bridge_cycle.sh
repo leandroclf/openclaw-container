@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT_DIR/control-plane/scripts/docker_guard.sh"
 PROD_OPENCLAW_HOME="${PROD_OPENCLAW_HOME:-$HOME/openclaw}"
 PROD_HANDOFF_DIR="${PROD_HANDOFF_DIR:-$PROD_OPENCLAW_HOME/runtime/agentos/handoffs}"
 PROD_CONTAINER_NAME="${PROD_CONTAINER_NAME:-openclaw}"
@@ -23,7 +24,8 @@ echo "[prod-delivery-execution] mode=$EXECUTION_BRIDGE_MODE"
 echo "[prod-delivery-execution] internal_primary=$INTERNAL_DELIVERY_PRIMARY"
 echo "[prod-delivery-execution] backend=$EXECUTION_BACKEND"
 
-docker exec "$PROD_CONTAINER_NAME" openclaw --profile prod gateway health
+docker_guard_ensure "prod-delivery-execution" || true
+docker_guard_health_or_skip "$PROD_CONTAINER_NAME" prod "prod-delivery-execution"
 
 cmd=(
   python3 "$ROOT_DIR/scripts/delivery_execution_bridge.py"
@@ -47,6 +49,6 @@ if [[ "$EXECUTION_BRIDGE_MODE" == "activate" ]]; then
 fi
 "${cmd[@]}"
 
-docker exec "$PROD_CONTAINER_NAME" openclaw --profile prod gateway health
+docker_guard_health_or_skip "$PROD_CONTAINER_NAME" prod "prod-delivery-execution"
 
 echo "[prod-delivery-execution] $(date -Iseconds) done"

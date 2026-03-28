@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT_DIR/control-plane/scripts/docker_guard.sh"
 CONTAINER="${CONTAINER:-openclaw}"
 PROFILE="${PROFILE:-prod}"
 OPENCLAW_HOME="${OPENCLAW_HOME:-$HOME/openclaw}"
@@ -17,6 +18,11 @@ AUTO_RESTART_ON_HEALTH_FAILURE="${AUTO_RESTART_ON_HEALTH_FAILURE:-1}"
 TELEGRAM_CONFLICT_WINDOW_MINUTES="${TELEGRAM_CONFLICT_WINDOW_MINUTES:-15}"
 TELEGRAM_CONFLICT_THRESHOLD="${TELEGRAM_CONFLICT_THRESHOLD:-4}"
 DISK_THRESHOLD_PERCENT="${DISK_THRESHOLD_PERCENT:-90}"
+DOCKER_AVAILABLE=1
+
+if ! docker_guard_ensure "daily-maintenance"; then
+  DOCKER_AVAILABLE=0
+fi
 
 log() {
   echo "[$(date -Is)] $*"
@@ -42,6 +48,11 @@ container_running() {
 }
 
 ensure_container_running() {
+  if [ "$DOCKER_AVAILABLE" != "1" ]; then
+    log "WARN: Docker daemon unavailable; skipping container start check."
+    return 0
+  fi
+
   if ! container_exists; then
     log "ERROR: container '$CONTAINER' not found."
     send_alert "OpenClaw daily maintenance: container '$CONTAINER' not found on $(hostname)."
@@ -60,6 +71,11 @@ run_health() {
 }
 
 validate_config_runtime() {
+  if [ "$DOCKER_AVAILABLE" != "1" ]; then
+    log "WARN: Docker daemon unavailable; skipping config validation."
+    return 0
+  fi
+
   local out
   if ! out="$(docker exec "$CONTAINER" openclaw --profile "$PROFILE" config validate --json 2>/dev/null)"; then
     log "ERROR: config validate command failed."
@@ -78,6 +94,11 @@ validate_config_runtime() {
 }
 
 verify_health_with_recovery() {
+  if [ "$DOCKER_AVAILABLE" != "1" ]; then
+    log "WARN: Docker daemon unavailable; skipping healthcheck and recovery."
+    return 0
+  fi
+
   if run_health; then
     log "Health check passed."
     return 0
@@ -117,6 +138,11 @@ check_disk_usage() {
 }
 
 check_telegram_conflicts() {
+  if [ "$DOCKER_AVAILABLE" != "1" ]; then
+    log "WARN: Docker daemon unavailable; skipping Telegram conflict check."
+    return 0
+  fi
+
   local conflicts
   conflicts="$(docker logs --since "${TELEGRAM_CONFLICT_WINDOW_MINUTES}m" "$CONTAINER" 2>&1 | grep -c 'getUpdates conflict' || true)"
   log "Telegram getUpdates conflicts (last ${TELEGRAM_CONFLICT_WINDOW_MINUTES}m): $conflicts"
@@ -127,6 +153,11 @@ check_telegram_conflicts() {
 }
 
 check_duplicate_openclaw_instances() {
+  if [ "$DOCKER_AVAILABLE" != "1" ]; then
+    log "WARN: Docker daemon unavailable; skipping container multiplicity check."
+    return 0
+  fi
+
   local count
   count="$(docker ps --format '{{.Names}}' | grep -Ec '^openclaw($|-)' || true)"
   log "Running OpenClaw containers: $count"
@@ -137,6 +168,11 @@ check_duplicate_openclaw_instances() {
 }
 
 run_secrets_audit() {
+  if [ "$DOCKER_AVAILABLE" != "1" ]; then
+    log "WARN: Docker daemon unavailable; skipping secrets audit."
+    return 0
+  fi
+
   local audit_json
   local audit_file
   local counts
@@ -205,6 +241,11 @@ run_placeholder_audit() {
 }
 
 print_runtime_summary() {
+  if [ "$DOCKER_AVAILABLE" != "1" ]; then
+    log "WARN: Docker daemon unavailable; skipping runtime summary."
+    return 0
+  fi
+
   log "Runtime summary:"
   docker ps --filter "name=^/${CONTAINER}$" --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
   docker exec "$CONTAINER" openclaw --profile "$PROFILE" config get agents.defaults.model

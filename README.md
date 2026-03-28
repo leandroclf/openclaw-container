@@ -11,6 +11,7 @@ running OpenClaw 24/7 inside WSL (Ubuntu-24.04).
 - Media/file dispatch and update preflights are safer, which reduces surprise breakage during automation and upgrades.
 
 This host keeps OpenClaw Docker-only by policy. Use the containerized CLI and `docker exec`/compose workflows for all privileged operations.
+The control-plane jobs default to `~/openclaw-workspace` as the active host workspace and, when Docker is temporarily unavailable, they continue the local snapshot/workflow steps while logging a clear warning instead of aborting the whole cycle.
 
 ### 1) Build the image (legacy builder only)
 ```bash

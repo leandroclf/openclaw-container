@@ -8,6 +8,7 @@ reproduced on another machine with the same behavior.
 - Hardened container: `--read-only`, `--cap-drop ALL`, `--tmpfs /tmp`.
 - Gateway bound to loopback only on port `18789`.
 - Persistent data/logs on host under `~/openclaw`.
+- Host-side AgentOS/control-plane snapshots use `~/openclaw-workspace` as the active workspace root.
 - Telegram channel enabled with pairing + allowlist.
 - Daily auto-update to stable (`openclaw@latest`) via cron.
 
