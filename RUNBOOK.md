@@ -139,7 +139,7 @@ Installed schedules:
 - `5 8 * * 1-5` model routing for business hours (`balanced_default`).
 - `5 20 * * *` model routing for off-hours (`cost_optimized`).
 - `15 4 * * *` log pruning/compression.
-- `17,47 * * * *` observe cycle refreshes CI, repo progress, and autonomy snapshots.
+- `17,47 * * * *` observe cycle refreshes CI, repo progress, and autonomy snapshots. The snapshot now surfaces a top-5 next-action queue and should favor repo-recovery whenever yellow/stale signals appear.
 
 To avoid duplicated health routines between WSL cron and OpenClaw internal
 scheduler, disable the two internal health jobs once:

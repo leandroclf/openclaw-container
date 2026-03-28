@@ -119,7 +119,7 @@ For strict production change guardrails and parallel deployment, see:
 - `./scripts/model_router.py` objective-based model routing (dry-run or apply)
 - `./scripts/model_route_apply.sh <objective>` apply routing + callbacks
 - `./scripts/agentos.py` Agent OS control-plane primitives (queue, events, preflight, scheduler, Telegram envelope)
-- `control-plane/scripts/*.sh` thin wrappers for Agent OS DB init, schema validation, preflight, supervisor cycle, and autonomy snapshots
+- `control-plane/scripts/*.sh` thin wrappers for Agent OS DB init, schema validation, preflight, supervisor cycle, and autonomy snapshots; the autonomy snapshot now emits a ranked top-5 action queue and prefers repo-recovery when yellow/stale signals are present
 - `control-plane/config/workflow_registry.json` low-risk workflow registry for Green rollout
 - `control-plane/scripts/run_workflow.sh` execute one registered low-risk workflow via Agent OS
 - `./scripts/test_gate.sh` run unit/regression tests (add
@@ -146,7 +146,7 @@ Quick examples:
 - baseline after daily update (`cost_optimized`)
 - business hours (`balanced_default`)
 - off-hours (`cost_optimized`)
-- the observe cycles also refresh CI, repository progress, and autonomy snapshots on the same cadence.
+- the observe cycles also refresh CI, repository progress, and autonomy snapshots on the same cadence; the autonomy snapshot is now a ranked action queue rather than a single CTA.
 
 ## Ops checklist
 See `CHECKLIST.md`.
