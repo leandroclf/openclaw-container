@@ -139,6 +139,7 @@ Installed schedules:
 - `5 8 * * 1-5` model routing for business hours (`balanced_default`).
 - `5 20 * * *` model routing for off-hours (`cost_optimized`).
 - `15 4 * * *` log pruning/compression.
+- `17,47 * * * *` observe cycle refreshes CI, repo progress, and autonomy snapshots.
 
 To avoid duplicated health routines between WSL cron and OpenClaw internal
 scheduler, disable the two internal health jobs once:
@@ -199,13 +200,10 @@ npm view @anthropic-ai/claude-code version
 # VS Code extension from WSL
 "/mnt/c/Users/<WINDOWS_USER>/AppData/Local/Programs/Microsoft VS Code/bin/code" \
   --install-extension openai.chatgpt --force
-
-# OpenClaw CLI on the host (targets the running container)
-npm install -g --prefix ~/.local openclaw@latest
-export OPENCLAW_CONTAINER=openclaw
-openclaw --version
-openclaw --profile prod gateway health
 ```
+
+OpenClaw remains Docker-only in this environment. Use `docker exec` against the
+running container and keep privileged access centralized there.
 
 ## 15) Objective-based model routing (quality + cost)
 Routing policy and scores:

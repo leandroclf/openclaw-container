@@ -20,6 +20,7 @@ docker exec "$GREEN_CONTAINER_NAME" openclaw --profile prod gateway health
 "$ROOT_DIR/control-plane/scripts/run_workflow.sh" --db "$GREEN_AGENTOS_DB" --name daily_ops_state_lint --workspace-root "$GREEN_WORKSPACE_ROOT"
 "$ROOT_DIR/control-plane/scripts/run_workflow.sh" --db "$GREEN_AGENTOS_DB" --name daily_summary_rotation --workspace-root "$GREEN_WORKSPACE_ROOT"
 "$ROOT_DIR/control-plane/scripts/run_workflow.sh" --db "$GREEN_AGENTOS_DB" --name product_progress_snapshot --workspace-root "$GREEN_WORKSPACE_ROOT"
+"$ROOT_DIR/control-plane/scripts/run_workflow.sh" --db "$GREEN_AGENTOS_DB" --name autonomy_supervisor --workspace-root "$GREEN_WORKSPACE_ROOT"
 
 docker exec "$GREEN_CONTAINER_NAME" openclaw --profile prod gateway health
 

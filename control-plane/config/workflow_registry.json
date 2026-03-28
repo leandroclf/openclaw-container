@@ -1,5 +1,5 @@
 {
-  "version": "2026-03-06.1",
+  "version": "2026-03-28.1",
   "workflows": {
     "daily_ops_state_lint": {
       "kind": "ops_watchdog",
@@ -58,6 +58,26 @@
       ],
       "retryable": false,
       "leaseSeconds": 180
+    },
+    "autonomy_supervisor": {
+      "kind": "ops_watchdog",
+      "title": "Autonomy supervisor snapshot",
+      "priority": "low",
+      "command": [
+        "python3",
+        "ops/multiagent/delivery/scripts/autonomy_supervisor.py",
+        "--sync-dashboard"
+      ],
+      "acceptanceRequired": [
+        "report",
+        "command"
+      ],
+      "evidenceRefs": [
+        "ops/multiagent/delivery/autonomy-state.json",
+        "ops/multiagent/delivery/autonomy-state.md"
+      ],
+      "retryable": false,
+      "leaseSeconds": 120
     },
     "daily_summary_rotation": {
       "kind": "daily_summary",
