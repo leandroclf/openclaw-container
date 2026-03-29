@@ -120,6 +120,7 @@ For strict production change guardrails and parallel deployment, see:
 - `./scripts/model_router.py` objective-based model routing (dry-run or apply)
 - `./scripts/model_route_apply.sh <objective>` apply routing + callbacks
 - `./scripts/agentos.py` Agent OS control-plane primitives (queue, events, intake, preflight, scheduler, Telegram envelope)
+- `./scripts/channel_intake_bridge.py` normalize external channel JSON into the canonical intake path
 - `control-plane/scripts/*.sh` thin wrappers for Agent OS DB init, schema validation, preflight, supervisor cycle, and autonomy snapshots; the autonomy snapshot now emits a ranked top-5 action queue, tracks board-issue changes and packet coverage, and prefers repo-recovery when yellow/stale signals are present
 - `control-plane/config/workflow_registry.json` low-risk workflow registry for Green rollout
 - `control-plane/scripts/run_workflow.sh` execute one registered low-risk workflow via Agent OS

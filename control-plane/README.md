@@ -15,6 +15,7 @@ Contents:
 - `scripts/`
   - Thin wrappers for schema validation, DB init, preflight, and supervisor cycles.
   - Includes `agentos.py intake` to normalize channel JSON into the canonical task packet.
+  - Includes `channel_intake_bridge.py` for webhook/channel adapters that need the same intake path.
   - Includes `run_workflow.sh` for low-risk workflow execution via Agent OS.
 - `state/`
   - Local SQLite queue state (`agentos.db`) created at runtime.
@@ -28,3 +29,5 @@ Operational notes:
   explicitly wired into existing crons/workflows.
 - `scripts/agentos.py` is the executable entrypoint for queue, events, intake,
   scheduler, preflight, and envelope helpers.
+- `scripts/channel_intake_bridge.py` is the adapter entrypoint for external
+  channel/webhook payloads that should be normalized into the same packet.
