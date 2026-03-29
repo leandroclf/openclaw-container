@@ -3,7 +3,8 @@ MODO ENTREGA AGENT OS (executor backend, orientado por handoff canônico).
 CONTRATO DE ENTRADA:
 - Ler `/home/node/.openclaw/agentos/handoffs/delivery-execution-request.json`.
 - Se o arquivo não existir, registrar `HARD_BLOCKER` em `ops/multiagent/delivery/daily-summary.md` e parar.
-- Usar apenas o `issueId`, `repo`, `branch`, `kind`, `workflow` e `acceptance` do handoff.
+- Usar apenas o `issueId`, `repo`, `branch`, `kind`, `workflow`, `acceptance` e a origem canônica do handoff.
+- Tratar `source.channel`, `source.sessionKey`, `source.messageRef` e `source.dedupKey` como metadados obrigatórios de rastreabilidade.
 - Não selecionar itens adicionais do kanban neste ciclo.
 
 REGRAS OBRIGATÓRIAS:
@@ -24,10 +25,14 @@ SAÍDA OBRIGATÓRIA:
   - Agente + Skill + Workflow
   - `issueId`
   - repo
-  - branch
-  - testes executados
-  - commit/PR gerado
-  - blockers, se houver
+- branch
+- testes executados
+- commit/PR gerado
+- blockers, se houver
+- source.channel
+- source.sessionKey
+- source.messageRef
+- source.dedupKey
 - Escrever `/home/node/.openclaw/agentos/handoffs/delivery-execution-result.json` com:
   - requestId
   - issueId

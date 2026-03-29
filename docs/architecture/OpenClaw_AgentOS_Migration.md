@@ -203,7 +203,7 @@ Campos (recomendado):
 Campos (recomendado):
 - `eventVersion`, `eventType`, `eventId`, `createdAt`
 - `correlationId`, `taskId`
-- `source` (channel/session/message/user)
+- `source` (channel/session/messageRef/dedupKey/user)
 - `routing` (objective, requestedAgent, effectiveAgent, reason)
 - `payload` (pequeno)
 - `evidenceRefs[]` (paths/urls curtas)
@@ -230,7 +230,8 @@ EventTypes:
   "source": {
     "channel": "telegram",
     "sessionKey": "agent:main:main",
-    "messageId": "tg:123456",
+    "messageRef": "tg:123456",
+    "dedupKey": "telegram:agent-main-main:tg-123456:1a2b3c4d5e6f",
     "userId": "343551192"
   },
   "routing": {

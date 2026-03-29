@@ -47,6 +47,7 @@ def resolve_cron_job_id(profile: str, cron_name: str) -> str | None:
 
 
 def render_md(intent: dict) -> str:
+    source = intent.get("source", {})
     lines = [
         "# Idle Watchdog Execution Intent",
         "",
@@ -60,6 +61,13 @@ def render_md(intent: dict) -> str:
         f"- consumerReady: `{intent['guards']['consumerReady']}`",
         f"- requestFresh: `{intent['guards']['requestFresh']}`",
         f"- duplicateExecutionPrevented: `{intent['guards']['duplicateExecutionPrevented']}`",
+        "",
+        "## Source",
+        f"- channel: `{source.get('channel', 'cron')}`",
+        f"- sessionKey: `{source.get('sessionKey', 'n/a')}`",
+        f"- messageRef: `{source.get('messageRef', 'n/a')}`",
+        f"- dedupKey: `{source.get('dedupKey', 'n/a')}`",
+        f"- artifact: `{source.get('artifact', 'n/a')}`",
         "",
         "## Source Summary",
         f"- suggestedAction: `{intent['source']['suggestedAction']}`",
@@ -198,6 +206,10 @@ def main() -> None:
             "duplicateExecutionPrevented": duplicate_prevented,
         },
         "source": {
+            "channel": "cron",
+            "sessionKey": "cron:idle-watchdog",
+            "messageRef": request_id,
+            "dedupKey": request_id,
             "artifact": request["source"].get("artifact"),
             "suggestedAction": request["source"].get("suggestedAction"),
             "eligibleAutoTasks": request["source"].get("eligibleAutoTasks"),

@@ -32,11 +32,13 @@
     "priority": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
     "source": {
       "type": "object",
-      "required": ["channel"],
+      "required": ["channel", "sessionKey", "messageRef", "dedupKey"],
       "properties": {
         "channel": { "type": "string" },
         "sessionKey": { "type": "string" },
-        "messageId": { "type": "string" },
+        "messageRef": { "type": "string" },
+        "messageId": { "type": "string", "description": "Legacy alias for messageRef" },
+        "dedupKey": { "type": "string" },
         "userId": { "type": ["string", "integer"] }
       },
       "additionalProperties": true

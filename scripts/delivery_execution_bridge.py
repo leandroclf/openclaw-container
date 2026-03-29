@@ -42,6 +42,7 @@ def run_text(cmd: list[str]) -> str:
 
 def build_agent_message(request: dict) -> str:
     task = request.get("task", {})
+    source = request.get("source", {})
     handoff_json = json.dumps(request, ensure_ascii=False, indent=2)
     return (
         "MODO ENTREGA AGENT OS (executor backend, orientado por handoff canônico).\n\n"
@@ -64,7 +65,11 @@ def build_agent_message(request: dict) -> str:
         f"- repo: {task.get('repo')}\n"
         f"- branch: {task.get('branch')}\n"
         f"- kind: {task.get('kind')}\n"
-        f"- workflow: {task.get('workflow')}\n\n"
+        f"- workflow: {task.get('workflow')}\n"
+        f"- source.channel: {source.get('channel', 'n/a')}\n"
+        f"- source.sessionKey: {source.get('sessionKey', 'n/a')}\n"
+        f"- source.messageRef: {source.get('messageRef', 'n/a')}\n"
+        f"- source.dedupKey: {source.get('dedupKey', 'n/a')}\n\n"
         "JSON DO HANDOFF:\n"
         "```json\n"
         f"{handoff_json}\n"
@@ -90,6 +95,7 @@ def build_agent_message(request: dict) -> str:
 
 def build_codex_message(request: dict) -> str:
     task = request.get("task", {})
+    source = request.get("source", {})
     handoff_json = json.dumps(request, ensure_ascii=False, indent=2)
     return (
         "You are the Agent OS delivery executor.\n"
@@ -104,6 +110,10 @@ def build_codex_message(request: dict) -> str:
         "- For `code_impl`, success requires real evidence: automated test + commit + PR created or updated.\n"
         "- For `research`, success requires a traceable report artifact.\n"
         "- Update `/home/leandro/clawd/ops/multiagent/delivery/daily-summary.md` with issueId, repo, branch, tests, commit/PR and blockers.\n\n"
+        f"Source channel: {source.get('channel', 'n/a')}\n"
+        f"Source sessionKey: {source.get('sessionKey', 'n/a')}\n"
+        f"Source messageRef: {source.get('messageRef', 'n/a')}\n"
+        f"Source dedupKey: {source.get('dedupKey', 'n/a')}\n\n"
         "Handoff JSON:\n"
         "```json\n"
         f"{handoff_json}\n"
@@ -173,6 +183,7 @@ def resolve_cron_job(profile: str, cron_name: str) -> dict | None:
 
 
 def render_md(intent: dict) -> str:
+    source = intent.get("source", {})
     lines = [
         "# Delivery Execution Intent",
         "",
@@ -188,6 +199,13 @@ def render_md(intent: dict) -> str:
         f"- duplicateExecutionPrevented: `{intent['guards']['duplicateExecutionPrevented']}`",
         f"- targetCronEnabled: `{intent['guards']['targetCronEnabled']}`",
         f"- targetCronRunning: `{intent['guards']['targetCronRunning']}`",
+        "",
+        "## Source",
+        f"- channel: `{source.get('channel', 'n/a')}`",
+        f"- sessionKey: `{source.get('sessionKey', 'n/a')}`",
+        f"- messageRef: `{source.get('messageRef', 'n/a')}`",
+        f"- dedupKey: `{source.get('dedupKey', 'n/a')}`",
+        f"- artifact: `{source.get('artifact', 'n/a')}`",
         "",
         "## Source Task",
         f"- issueId: `{intent['source']['issueId']}`",

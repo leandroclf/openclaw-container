@@ -72,6 +72,20 @@ ACCEPTANCE_ALIASES = {
     "ci": ("ci:pass",),
     "ci_pass": ("ci:pass",),
 }
+SOURCE_FIELD_ALIASES = {
+    "session": "sessionKey",
+    "sessionId": "sessionKey",
+    "threadId": "sessionKey",
+    "chatId": "sessionKey",
+    "conversationId": "sessionKey",
+    "messageId": "messageRef",
+    "updateId": "messageRef",
+    "postId": "messageRef",
+    "eventId": "messageRef",
+    "dedup": "dedupKey",
+    "dedup_key": "dedupKey",
+    "idempotencyKey": "dedupKey",
+}
 
 
 class ValidationError(ValueError):
@@ -104,6 +118,27 @@ def parse_timestamp(raw: str | None) -> datetime | None:
     if not raw:
         return None
     return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+
+
+def first_nonempty(*values: Any) -> Any:
+    for value in values:
+        if value is None:
+            continue
+        if isinstance(value, str):
+            stripped = value.strip()
+            if stripped:
+                return stripped
+            continue
+        return value
+    return None
+
+
+def has_content(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    return True
 
 
 def ensure_dir(path: Path) -> None:
@@ -236,6 +271,87 @@ def parse_bool_env(name: str) -> bool | None:
     raise ValidationError(f"invalid boolean env for {name}: {raw}")
 
 
+def compute_source_dedup_key(source: dict[str, Any], *, dedup_seed: dict[str, Any] | None = None) -> str:
+    basis: dict[str, Any] = {}
+    for key in (
+        "channel",
+        "sessionKey",
+        "messageRef",
+        "issueId",
+        "workflow",
+        "kind",
+        "repo",
+        "branch",
+        "parentTaskId",
+        "role",
+        "boardSection",
+        "workspaceRoot",
+    ):
+        value = source.get(key)
+        if has_content(value):
+            basis[key] = value
+    if dedup_seed:
+        for key, value in dedup_seed.items():
+            if has_content(value):
+                basis.setdefault(key, value)
+    if not basis:
+        return f"dedup:{uuid.uuid4().hex[:12]}"
+    digest = hashlib.sha256(json.dumps(basis, sort_keys=True, ensure_ascii=True, default=str).encode("utf-8")).hexdigest()[:12]
+    label_parts = [slugify(str(basis.get("channel", "task")))]
+    for key in ("issueId", "workflow", "kind", "sessionKey", "messageRef"):
+        value = basis.get(key)
+        if has_content(value):
+            label_parts.append(slugify(str(value)))
+            break
+    return ":".join(part for part in label_parts if part) + f":{digest}"
+
+
+def normalize_source_metadata(
+    source: dict[str, Any] | None,
+    *,
+    fallback_channel: str = "board",
+    fallback_session: str | None = None,
+    fallback_message_ref: str | None = None,
+    dedup_seed: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    normalized = dict(source or {})
+    for alias, canonical in SOURCE_FIELD_ALIASES.items():
+        if canonical not in normalized and alias in normalized:
+            normalized[canonical] = normalized[alias]
+
+    channel = first_nonempty(normalized.get("channel"), fallback_channel) or "board"
+    normalized["channel"] = str(channel).strip()
+
+    session_key = first_nonempty(
+        normalized.get("sessionKey"),
+        normalized.get("threadId"),
+        normalized.get("chatId"),
+        normalized.get("conversationId"),
+        fallback_session,
+        normalized["channel"],
+    )
+    normalized["sessionKey"] = str(session_key).strip()
+
+    message_ref = first_nonempty(
+        normalized.get("messageRef"),
+        normalized.get("messageId"),
+        normalized.get("updateId"),
+        normalized.get("postId"),
+        normalized.get("eventId"),
+        fallback_message_ref,
+        normalized["sessionKey"],
+    )
+    normalized["messageRef"] = str(message_ref).strip()
+    normalized["messageId"] = str(normalized["messageRef"])
+
+    dedup_key = first_nonempty(normalized.get("dedupKey"), normalized.get("dedup"), normalized.get("idempotencyKey"))
+    if dedup_key is None:
+        dedup_key = compute_source_dedup_key(normalized, dedup_seed=dedup_seed)
+    normalized["dedupKey"] = str(dedup_key).strip()
+
+    return normalized
+
+
 def read_schema(name: str) -> dict[str, Any]:
     return load_json(SCHEMAS_DIR / name)
 
@@ -296,6 +412,8 @@ def validate_task(task: dict[str, Any]) -> None:
             "timestamps",
         ],
     )
+    source = task["source"]
+    _require(source, ["channel", "sessionKey", "messageRef", "dedupKey"], "source.")
     if task["executionMode"] not in {"AUTO", "HUMAN"}:
         raise ValidationError("executionMode must be AUTO or HUMAN")
     if task["priority"] not in {"low", "medium", "high", "critical"}:
@@ -397,6 +515,38 @@ def default_task(
     branch: str | None = None,
 ) -> dict[str, Any]:
     created_at = now_iso()
+    source_channel = str((source or {}).get("channel") or "board").strip().lower()
+    title_seed = slugify(title or issue_id or workflow or kind or "task")
+    if source_channel == "board":
+        fallback_session = f"board:{issue_id or title_seed}"
+        fallback_message_ref = issue_id or title_seed
+    elif source_channel == "workflow":
+        fallback_session = f"workflow:{workflow or title_seed}"
+        fallback_message_ref = workflow or title_seed
+    elif source_channel == "manual":
+        fallback_session = "manual"
+        fallback_message_ref = title_seed
+    else:
+        fallback_session = f"{source_channel}:{issue_id or title_seed}"
+        fallback_message_ref = issue_id or title_seed
+    normalized_source = normalize_source_metadata(
+        source,
+        fallback_channel=source_channel,
+        fallback_session=fallback_session,
+        fallback_message_ref=fallback_message_ref,
+        dedup_seed={
+            "kind": kind,
+            "title": title,
+            "workflow": workflow,
+            "issueId": issue_id,
+            "repo": repo,
+            "branch": branch,
+            "boardSection": (source or {}).get("boardSection"),
+            "workspaceRoot": (source or {}).get("workspaceRoot"),
+            "parentTaskId": (source or {}).get("parentTaskId"),
+            "role": (source or {}).get("role"),
+        },
+    )
     task = {
         "schemaVersion": "2026-03-05.1",
         "taskId": str(uuid.uuid4()),
@@ -406,7 +556,7 @@ def default_task(
         "workflow": workflow,
         "executionMode": execution_mode,
         "priority": priority,
-        "source": source,
+        "source": normalized_source,
         "routing": routing,
         "constraints": constraints
         or {
@@ -1212,6 +1362,7 @@ def repo_readiness_snapshot(repo_path: Path) -> dict[str, Any]:
 
 
 def render_delivery_handoff_md(request: dict[str, Any]) -> str:
+    source = request.get("source", {})
     lines = [
         "# Delivery Execution Handoff",
         "",
@@ -1228,6 +1379,12 @@ def render_delivery_handoff_md(request: dict[str, Any]) -> str:
         f"- priority: `{request['task']['priority']}`",
         f"- repo: `{request['task'].get('repo', 'n/a')}`",
         f"- branch: `{request['task'].get('branch', 'n/a')}`",
+        "",
+        "## Source",
+        f"- channel: `{source.get('channel', 'n/a')}`",
+        f"- sessionKey: `{source.get('sessionKey', 'n/a')}`",
+        f"- messageRef: `{source.get('messageRef', 'n/a')}`",
+        f"- dedupKey: `{source.get('dedupKey', 'n/a')}`",
         "",
         "## Routing",
         f"- requestedAgent: `{request['routing'].get('requestedAgent', 'n/a')}`",
@@ -1276,7 +1433,6 @@ def export_delivery_handoff(
     bridge_dir: Path,
     issue_id: str | None = None,
 ) -> dict[str, Any]:
-    del workspace_root  # Reserved for future repo-local evidence expansion.
     candidates = [
         task
         for task in list_tasks(conn, status="queued")
@@ -1337,11 +1493,31 @@ def export_delivery_handoff(
             renewal = int(current.get("renewal", 0)) + 1
 
         request_id = compute_delivery_request_id(task, renewal=renewal)
+        task_source = normalize_source_metadata(
+            task.get("source"),
+            fallback_channel=str((task.get("source") or {}).get("channel") or "board").strip().lower(),
+            fallback_session=f"executor:{task['taskId']}",
+            fallback_message_ref=task.get("issueId") or task["title"],
+            dedup_seed={
+                "taskId": task["taskId"],
+                "issueId": task.get("issueId"),
+                "repo": task.get("repo"),
+                "branch": task.get("branch"),
+                "parentTaskId": (task.get("source") or {}).get("parentTaskId"),
+                "role": (task.get("source") or {}).get("role"),
+            },
+        )
         request = {
             "requestId": request_id,
             "createdAt": now_iso(),
             "renewal": renewal,
             "status": "pending_internal_consumption",
+            "source": {
+                **task_source,
+                "artifact": str(json_path),
+                "requestId": request_id,
+                "renewal": renewal,
+            },
             "task": {
                 "taskId": task["taskId"],
                 "issueId": task.get("issueId"),

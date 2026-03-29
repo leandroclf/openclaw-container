@@ -39,6 +39,7 @@ def compute_request_id(report: dict) -> str:
 
 
 def render_md(request: dict) -> str:
+    source = request.get("source", {})
     lines = [
         "# Idle Watchdog Handoff Request",
         "",
@@ -47,6 +48,10 @@ def render_md(request: dict) -> str:
         f"status: `{request['status']}`",
         "",
         "## Source",
+        f"- channel: `{source.get('channel', 'cron')}`",
+        f"- sessionKey: `{source.get('sessionKey', 'n/a')}`",
+        f"- messageRef: `{source.get('messageRef', 'n/a')}`",
+        f"- dedupKey: `{source.get('dedupKey', 'n/a')}`",
         f"- observedAt: `{request['source']['observedAt']}`",
         f"- suggestedAction: `{request['source']['suggestedAction']}`",
         f"- reason: {request['source']['reason']}",
@@ -116,6 +121,10 @@ def main() -> None:
         "createdAt": now.isoformat().replace("+00:00", "Z"),
         "status": "pending_internal_consumption",
         "source": {
+            "channel": "cron",
+            "sessionKey": "cron:idle-watchdog",
+            "messageRef": observed_at.isoformat().replace("+00:00", "Z"),
+            "dedupKey": request_id,
             "artifact": str(source_json),
             "observedAt": observed_at.isoformat().replace("+00:00", "Z"),
             "suggestedAction": report.get("suggested_action"),
