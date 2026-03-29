@@ -14,6 +14,7 @@ Contents:
   - Executable production/preflight policy derived from change-management docs.
 - `scripts/`
   - Thin wrappers for schema validation, DB init, preflight, and supervisor cycles.
+  - Includes `agentos.py intake` to normalize channel JSON into the canonical task packet.
   - Includes `run_workflow.sh` for low-risk workflow execution via Agent OS.
 - `state/`
   - Local SQLite queue state (`agentos.db`) created at runtime.
@@ -25,5 +26,5 @@ Operational notes:
 - The SQLite database is intentionally not committed.
 - This control plane is additive and does not change production behavior until
   explicitly wired into existing crons/workflows.
-- `scripts/agentos.py` is the executable entrypoint for queue, events,
+- `scripts/agentos.py` is the executable entrypoint for queue, events, intake,
   scheduler, preflight, and envelope helpers.

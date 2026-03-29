@@ -864,6 +864,17 @@ def get_task(conn: sqlite3.Connection, task_id: str) -> dict[str, Any] | None:
     return json.loads(row["task_json"])
 
 
+def find_task_by_source_dedup_key(conn: sqlite3.Connection, dedup_key: str) -> dict[str, Any] | None:
+    if not dedup_key:
+        return None
+    rows = conn.execute("SELECT task_json FROM tasks ORDER BY created_at ASC").fetchall()
+    for row in rows:
+        task = json.loads(row["task_json"])
+        if task.get("source", {}).get("dedupKey") == dedup_key:
+            return task
+    return None
+
+
 def list_tasks(conn: sqlite3.Connection, status: str | None = None) -> list[dict[str, Any]]:
     if status:
         rows = conn.execute(
@@ -1303,6 +1314,114 @@ def build_issue_task(issue: DeliveryBoardIssue, *, workspace_root: Path, allowed
     task["source"]["rawFields"] = issue.raw_fields or {}
     validate_task(task)
     return task
+
+
+def build_intake_task(
+    payload: dict[str, Any],
+    *,
+    allowed_agents: list[str] | None = None,
+    requested_agent: str | None = None,
+) -> dict[str, Any]:
+    payload = dict(payload or {})
+    source_payload = dict(payload.get("source") or {}) if isinstance(payload.get("source"), dict) else {}
+    for key in (
+        "channel",
+        "session",
+        "sessionId",
+        "threadId",
+        "chatId",
+        "conversationId",
+        "sessionKey",
+        "messageRef",
+        "messageId",
+        "updateId",
+        "postId",
+        "eventId",
+        "dedupKey",
+        "dedup",
+        "dedup_key",
+        "idempotencyKey",
+        "issueId",
+        "workflow",
+        "kind",
+        "repo",
+        "branch",
+        "boardSection",
+        "workspaceRoot",
+        "parentTaskId",
+        "role",
+        "owner",
+        "boardTitle",
+    ):
+        if key in payload and key not in source_payload:
+            source_payload[key] = payload[key]
+
+    kind = str(first_nonempty(payload.get("kind"), "default_chat")).strip()
+    title = str(
+        first_nonempty(
+            payload.get("title"),
+            payload.get("subject"),
+            payload.get("summary"),
+            payload.get("message"),
+            payload.get("text"),
+            payload.get("body"),
+            f"Incoming {kind}",
+        )
+    ).strip()
+    workflow = str(first_nonempty(payload.get("workflow"), "operate-and-grow")).strip()
+    execution_mode = str(first_nonempty(payload.get("executionMode"), "AUTO")).strip().upper()
+    priority = str(first_nonempty(payload.get("priority"), "medium")).strip().lower()
+    resolved_allowed_agents = allowed_agents or payload.get("allowedAgents") or ["gemini"]
+    if isinstance(resolved_allowed_agents, str):
+        resolved_allowed_agents = [item for item in resolved_allowed_agents.split(",") if item]
+    if not resolved_allowed_agents:
+        resolved_allowed_agents = ["gemini"]
+    resolved_requested_agent = first_nonempty(requested_agent, payload.get("requestedAgent"))
+    routing = payload.get("routing") if isinstance(payload.get("routing"), dict) else resolve_routing(
+        kind=kind,
+        allowed_agents=list(resolved_allowed_agents),
+        requested_agent=str(resolved_requested_agent) if resolved_requested_agent is not None else None,
+    ).as_dict()
+    task = default_task(
+        kind=kind,
+        title=title,
+        workflow=workflow,
+        execution_mode=execution_mode,
+        priority=priority,
+        source=source_payload,
+        routing=routing,
+        constraints=payload.get("constraints"),
+        budget=payload.get("budget"),
+        acceptance=payload.get("acceptance"),
+        preflight=payload.get("preflight"),
+        issue_id=first_nonempty(payload.get("issueId"), source_payload.get("issueId")),
+        repo=first_nonempty(payload.get("repo"), source_payload.get("repo")),
+        branch=first_nonempty(payload.get("branch"), source_payload.get("branch")),
+    )
+    return task
+
+
+def ingest_channel_event(
+    conn: sqlite3.Connection,
+    payload: dict[str, Any],
+    *,
+    allowed_agents: list[str] | None = None,
+    requested_agent: str | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    task = build_intake_task(payload, allowed_agents=allowed_agents, requested_agent=requested_agent)
+    canonical = find_task_by_source_dedup_key(conn, task["source"]["dedupKey"])
+    if canonical is not None:
+        return {
+            "status": "duplicate",
+            "dedupKey": task["source"]["dedupKey"],
+            "canonicalTaskId": canonical["taskId"],
+            "task": canonical,
+        }
+    if dry_run:
+        return {"status": "dry_run", "task": task}
+    queued = enqueue_task(conn, task)
+    return {"status": "queued", "task": queued}
 
 
 def compute_delivery_request_id(task: dict[str, Any], renewal: int = 0) -> str:
@@ -2225,6 +2344,13 @@ def build_parser() -> argparse.ArgumentParser:
     enqueue_parser.add_argument("--routing", action="store_true")
     enqueue_parser.add_argument("--auth", action="store_true")
 
+    intake_parser = sub.add_parser("intake", help="Normalize an incoming channel event into a canonical task packet")
+    intake_parser.add_argument("--db", default=str(DEFAULT_DB_PATH))
+    intake_parser.add_argument("--file", default=None, help="Read intake payload JSON from this file; stdin is used otherwise")
+    intake_parser.add_argument("--requested-agent", default=None)
+    intake_parser.add_argument("--allowed-agents", default="gemini")
+    intake_parser.add_argument("--dry-run", action="store_true")
+
     claim_parser = sub.add_parser("claim-next", help="Claim next task from the queue")
     claim_parser.add_argument("--db", default=str(DEFAULT_DB_PATH))
     claim_parser.add_argument("--worker-id", required=True)
@@ -2387,54 +2513,70 @@ def main(argv: list[str] | None = None) -> int:
     conn = open_db(db_path)
     try:
         if args.command == "enqueue-demo":
+                allowed_agents = [item for item in args.allowed_agents.split(",") if item]
+                decision = resolve_routing(
+                    kind=args.kind,
+                    allowed_agents=allowed_agents,
+                    requested_agent=args.requested_agent,
+                )
+                task = default_task(
+                    kind=args.kind,
+                    title=args.title,
+                    workflow=args.workflow,
+                    execution_mode=args.execution_mode,
+                    priority=args.priority,
+                    source={"channel": "manual"},
+                    routing=decision.as_dict(),
+                    preflight={
+                        "touchesProduction": args.touches_production,
+                        "isParallelCandidate": args.parallel_candidate,
+                        "reusedProdVolumes": args.reused_prod_volumes,
+                        "reusedProdWorkspace": args.reused_prod_workspace,
+                        "usedProdTelegramTokenOnCandidate": args.used_prod_telegram_token,
+                        "candidateBindLoopback": not args.candidate_bind_not_loopback,
+                        "authMultiProvider": args.auth_multi_provider,
+                        "changeWave": {
+                            "infra": args.infra,
+                            "policy": args.policy,
+                            "routing": args.routing,
+                            "auth": args.auth,
+                        },
+                    }
+                    if any(
+                        [
+                            args.touches_production,
+                            args.parallel_candidate,
+                            args.reused_prod_volumes,
+                            args.reused_prod_workspace,
+                            args.used_prod_telegram_token,
+                            args.candidate_bind_not_loopback,
+                            args.auth_multi_provider,
+                            args.infra,
+                            args.policy,
+                            args.routing,
+                            args.auth,
+                            args.kind in SENSITIVE_KINDS,
+                        ]
+                    )
+                    else None,
+                )
+                _print_json(enqueue_task(conn, task))
+                return 0
+
+        if args.command == "intake":
+            if args.file:
+                payload = json.loads(Path(args.file).read_text(encoding="utf-8"))
+            else:
+                payload = json.loads(sys.stdin.read())
             allowed_agents = [item for item in args.allowed_agents.split(",") if item]
-            decision = resolve_routing(
-                kind=args.kind,
+            result = ingest_channel_event(
+                conn,
+                payload,
                 allowed_agents=allowed_agents,
                 requested_agent=args.requested_agent,
+                dry_run=args.dry_run,
             )
-            task = default_task(
-                kind=args.kind,
-                title=args.title,
-                workflow=args.workflow,
-                execution_mode=args.execution_mode,
-                priority=args.priority,
-                source={"channel": "manual"},
-                routing=decision.as_dict(),
-                preflight={
-                    "touchesProduction": args.touches_production,
-                    "isParallelCandidate": args.parallel_candidate,
-                    "reusedProdVolumes": args.reused_prod_volumes,
-                    "reusedProdWorkspace": args.reused_prod_workspace,
-                    "usedProdTelegramTokenOnCandidate": args.used_prod_telegram_token,
-                    "candidateBindLoopback": not args.candidate_bind_not_loopback,
-                    "authMultiProvider": args.auth_multi_provider,
-                    "changeWave": {
-                        "infra": args.infra,
-                        "policy": args.policy,
-                        "routing": args.routing,
-                        "auth": args.auth,
-                    },
-                }
-                if any(
-                    [
-                        args.touches_production,
-                        args.parallel_candidate,
-                        args.reused_prod_volumes,
-                        args.reused_prod_workspace,
-                        args.used_prod_telegram_token,
-                        args.candidate_bind_not_loopback,
-                        args.auth_multi_provider,
-                        args.infra,
-                        args.policy,
-                        args.routing,
-                        args.auth,
-                        args.kind in SENSITIVE_KINDS,
-                    ]
-                )
-                else None,
-            )
-            _print_json(enqueue_task(conn, task))
+            _print_json(result)
             return 0
 
         if args.command == "claim-next":

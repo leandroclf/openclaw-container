@@ -130,6 +130,54 @@ class AgentOSTestCase(unittest.TestCase):
         self.assertIn("Large JSON payload omitted", parts[0])
         self.assertIn("artifact://json", parts[0])
 
+    def test_intake_event_normalizes_source_and_deduplicates(self) -> None:
+        payload = {
+            "channel": "telegram",
+            "sessionId": "tg:chat-17",
+            "messageId": "msg-42",
+            "title": "Telegram request",
+            "kind": "planning",
+            "workflow": "operate-and-grow",
+            "executionMode": "AUTO",
+            "priority": "medium",
+            "requestedAgent": "gemini",
+            "allowedAgents": ["gemini"],
+        }
+
+        first = agentos.ingest_channel_event(self.conn, payload)
+        self.assertEqual(first["status"], "queued")
+        task = first["task"]
+        self.assertEqual(task["source"]["channel"], "telegram")
+        self.assertEqual(task["source"]["sessionKey"], "tg:chat-17")
+        self.assertEqual(task["source"]["messageRef"], "msg-42")
+        self.assertTrue(task["source"]["dedupKey"].startswith("telegram:"))
+
+        duplicate = agentos.ingest_channel_event(self.conn, payload)
+        self.assertEqual(duplicate["status"], "duplicate")
+        self.assertEqual(duplicate["canonicalTaskId"], task["taskId"])
+        self.assertEqual(len(agentos.list_tasks(self.conn)), 1)
+
+    def test_intake_event_dry_run_returns_canonical_task_without_enqueue(self) -> None:
+        payload = {
+            "source": {
+                "channel": "slack",
+                "session": "slack:thread-9",
+                "messageRef": "slack-msg-9",
+            },
+            "title": "Slack intake request",
+            "kind": "default_chat",
+            "workflow": "operate-and-grow",
+            "executionMode": "AUTO",
+            "priority": "low",
+        }
+
+        result = agentos.ingest_channel_event(self.conn, payload, dry_run=True)
+        self.assertEqual(result["status"], "dry_run")
+        self.assertEqual(result["task"]["source"]["channel"], "slack")
+        self.assertEqual(result["task"]["source"]["sessionKey"], "slack:thread-9")
+        self.assertEqual(result["task"]["source"]["messageRef"], "slack-msg-9")
+        self.assertEqual(agentos.list_tasks(self.conn), [])
+
     def test_routing_plan_links_to_model_router(self) -> None:
         plan = agentos.resolve_routing_plan(
             kind="code_impl",
