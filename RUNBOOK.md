@@ -10,6 +10,7 @@ reproduced on another machine with the same behavior.
 - Persistent data/logs on host under `~/openclaw`.
 - Host-side AgentOS/control-plane snapshots use `~/openclaw-workspace` as the active workspace root.
 - Telegram channel enabled with pairing + allowlist.
+- Telegram intake is mirrored into Agent OS via `./scripts/telegram_channel_bridge.py`, which polls Telegram logs and forwards inbound updates into the canonical intake queue.
 - Daily auto-update to stable (`openclaw@latest`) via cron.
 
 ## 2) Host prerequisites
@@ -118,7 +119,18 @@ Reapply allowlist if needed:
 docker exec openclaw openclaw --profile prod config set channels.telegram.allowFrom '[343551192]'
 ```
 
-## 10) Install real cron schedule in WSL
+## 10) Mirror Telegram intake into Agent OS
+The runtime keeps Telegram as a channel of record, and the host bridge mirrors
+inbound Telegram updates into the Agent OS intake queue on the observe cycle.
+This is wired through the `telegram_channel_ingest` workflow in
+`control-plane/config/workflow_registry.json`.
+
+Manual dry-run:
+```bash
+./scripts/telegram_channel_bridge.py --dry-run
+```
+
+## 11) Install real cron schedule in WSL
 Create alert target file:
 ```bash
 cat > ~/openclaw/config/alerts.env <<'EOF'
@@ -149,7 +161,7 @@ docker exec openclaw openclaw --profile prod cron disable f257b81c-d28b-48b5-af7
 docker exec openclaw openclaw --profile prod cron disable 32a75901-b0b1-4b72-8153-12a9e44beee9
 ```
 
-## 11) Verification commands
+## 12) Verification commands
 ```bash
 docker ps --filter name=openclaw
 docker exec openclaw openclaw --profile prod gateway health
@@ -157,7 +169,7 @@ docker exec openclaw openclaw --profile prod status
 tail -n 200 ~/openclaw/logs/openclaw-$(date +%F).log
 ```
 
-## 12) Stable update policy
+## 13) Stable update policy
 - `scripts/update.sh` resolves the newest `openclaw` npm stable version and
   passes it as `OPENCLAW_VERSION` build arg.
 - `latest` is the stable channel.
@@ -176,7 +188,7 @@ for stability.
 Policy note:
 - This environment stays Docker-only. Do not install or rely on a host-side OpenClaw CLI for privileged operations; keep access centralized in the container and use `docker exec`, compose, or container-managed scripts.
 
-## 13) Change alert target to another Telegram user/chat
+## 14) Change alert target to another Telegram user/chat
 1. Set new ID in `~/openclaw/config/alerts.env`:
    - `ALERT_TELEGRAM_TARGET=<new_user_or_chat_id>`
 2. Validate send path:
@@ -186,7 +198,7 @@ Policy note:
 3. If target is a group/channel, ensure OpenClaw can address it (allowlist and
 pairing policy as required by your channel config).
 
-## 14) Optional host tool alignment (Codex + Claude + VS Code)
+## 15) Optional host tool alignment (Codex + Claude + VS Code)
 ```bash
 # WSL Codex CLI
 npm install -g --prefix ~/.local @openai/codex@latest
@@ -206,7 +218,7 @@ npm view @anthropic-ai/claude-code version
 OpenClaw remains Docker-only in this environment. Use `docker exec` against the
 running container and keep privileged access centralized there.
 
-## 15) Objective-based model routing (quality + cost)
+## 16) Objective-based model routing (quality + cost)
 Routing policy and scores:
 - `ops/model-routing/model_catalog.json`
 - `ops/model-routing/objectives.json`

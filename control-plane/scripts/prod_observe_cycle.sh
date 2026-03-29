@@ -23,6 +23,7 @@ docker_guard_health_or_skip "$PROD_CONTAINER_NAME" prod "prod-observe"
 "$ROOT_DIR/control-plane/scripts/run_workflow.sh" --db "$PROD_AGENTOS_DB" --name product_progress_snapshot --workspace-root "$PROD_WORKSPACE_ROOT"
 "$ROOT_DIR/control-plane/scripts/run_workflow.sh" --db "$PROD_AGENTOS_DB" --name dashboard_data_sync --workspace-root "$PROD_WORKSPACE_ROOT"
 "$ROOT_DIR/control-plane/scripts/run_workflow.sh" --db "$PROD_AGENTOS_DB" --name github_ci_status_collect --workspace-root "$PROD_WORKSPACE_ROOT"
+"$ROOT_DIR/control-plane/scripts/run_workflow.sh" --db "$PROD_AGENTOS_DB" --name telegram_channel_ingest --workspace-root "$PROD_WORKSPACE_ROOT"
 "$ROOT_DIR/control-plane/scripts/run_workflow.sh" --db "$PROD_AGENTOS_DB" --name autonomy_supervisor --workspace-root "$PROD_WORKSPACE_ROOT"
 
 docker_guard_health_or_skip "$PROD_CONTAINER_NAME" prod "prod-observe"

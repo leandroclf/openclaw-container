@@ -143,6 +143,7 @@ docker run -d --name openclaw --restart unless-stopped \
 - `./scripts/install_cron.sh` install/update cron jobs idempotently
 - `./scripts/model_router.py` objective-based model routing policy engine
 - `./scripts/model_route_apply.sh <objective>` apply routing + callbacks
+- `./scripts/telegram_channel_bridge.py` poll Telegram logs and mirror inbound updates into Agent OS intake
 - `./scripts/test_gate.sh` run unit/regression tests (`--with-integration` for
   docker guardrail tests)
 

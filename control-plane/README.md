@@ -16,6 +16,7 @@ Contents:
   - Thin wrappers for schema validation, DB init, preflight, and supervisor cycles.
   - Includes `agentos.py intake` to normalize channel JSON into the canonical task packet.
   - Includes `channel_intake_bridge.py` for webhook/channel adapters that need the same intake path.
+  - Includes `telegram_channel_bridge.py` for polling Telegram channel logs into the same intake path.
   - Includes `run_workflow.sh` for low-risk workflow execution via Agent OS.
 - `state/`
   - Local SQLite queue state (`agentos.db`) created at runtime.
@@ -31,3 +32,6 @@ Operational notes:
   scheduler, preflight, and envelope helpers.
 - `scripts/channel_intake_bridge.py` is the adapter entrypoint for external
   channel/webhook payloads that should be normalized into the same packet.
+- `scripts/telegram_channel_bridge.py` is the Telegram polling bridge that
+  mirrors channel activity into the canonical intake path and keeps the
+  omnichannel source contract intact.
