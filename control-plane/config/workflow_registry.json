@@ -38,6 +38,32 @@
       "retryable": false,
       "leaseSeconds": 120
     },
+    "dashboard_data_sync": {
+      "kind": "ops_watchdog",
+      "title": "Dashboard data sync",
+      "priority": "low",
+      "command": [
+        "python3",
+        "tools/dashboard_data_sync_workflow.py"
+      ],
+      "acceptanceRequired": [
+        "report",
+        "command"
+      ],
+      "evidenceRefs": [
+        "projects/site-lf-solucoes/dashboards/data/deploy-status.json",
+        "projects/site-lf-solucoes/dashboards/data/deploy-status.md",
+        "projects/site-lf-solucoes/dashboards/data/autonomy-state.json",
+        "projects/site-lf-solucoes/dashboards/data/autonomy-state.md",
+        "projects/site-lf-solucoes/dashboards/data/semaphore-state.json",
+        "projects/site-lf-solucoes/dashboards/data/autopilot-sla.json",
+        "projects/site-lf-solucoes/dashboards/data/handoff.json",
+        "projects/site-lf-solucoes/dashboards/data/product-code-progress.json",
+        "projects/site-lf-solucoes/dashboards/data/metrics-history.json"
+      ],
+      "retryable": false,
+      "leaseSeconds": 180
+    },
     "github_ci_status_collect": {
       "kind": "ops_watchdog",
       "title": "GitHub CI status collect",
