@@ -206,6 +206,10 @@ def build_intake_payload_from_log(line: dict[str, Any]) -> dict[str, Any] | None
         source["telegramUpdateId"] = update_id
     if callback_id is not None:
         source["telegramCallbackId"] = callback_id
+    source["flowId"] = session_key
+    source["flowStep"] = message_ref
+    source["sessionReplayKey"] = f"{session_key}:{message_ref}"
+    source["replayKey"] = f"telegram:{line_digest(line)[:12]}"
 
     payload: dict[str, Any] = {
         "title": title,
@@ -215,6 +219,12 @@ def build_intake_payload_from_log(line: dict[str, Any]) -> dict[str, Any] | None
         "executionMode": "AUTO",
         "priority": "medium",
         "source": source,
+        "flow": {
+            "flowId": session_key,
+            "flowStep": message_ref,
+            "sessionReplayKey": source["sessionReplayKey"],
+            "replayKey": source["replayKey"],
+        },
     }
     if issue_id is not None:
         payload["issueId"] = issue_id

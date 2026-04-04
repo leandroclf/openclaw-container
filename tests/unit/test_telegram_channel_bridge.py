@@ -41,6 +41,10 @@ class TelegramChannelBridgeTestCase(unittest.TestCase):
         self.assertEqual(payload["source"]["channel"], "telegram")
         self.assertEqual(payload["source"]["sessionKey"], "telegram:chat:343551192")
         self.assertEqual(payload["source"]["messageRef"], "tg:update:7788")
+        self.assertEqual(payload["source"]["flowId"], "telegram:chat:343551192")
+        self.assertEqual(payload["source"]["flowStep"], "tg:update:7788")
+        self.assertEqual(payload["source"]["sessionReplayKey"], "telegram:chat:343551192:tg:update:7788")
+        self.assertTrue(payload["source"]["replayKey"].startswith("telegram:"))
         self.assertEqual(payload["issueId"], "ISSUE-007")
         self.assertIn("keep monitoring", payload["title"])
 

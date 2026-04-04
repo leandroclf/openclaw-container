@@ -30,13 +30,28 @@ log() {
 
 "$ROOT_DIR/scripts/sync_runtime_config.sh" >/dev/null
 
+format_reply() {
+  local channel="$1"
+  local artifact_ref="${2:-}"
+  if [ -n "$artifact_ref" ]; then
+    python3 "$ROOT_DIR/scripts/before_agent_reply.py" --channel "$channel" --artifact-ref "$artifact_ref"
+  else
+    python3 "$ROOT_DIR/scripts/before_agent_reply.py" --channel "$channel"
+  fi
+}
+
 send_alert() {
   local message="$1"
   if [ -z "$ALERT_TARGET" ]; then
     return 0
   fi
+  local formatted
+  formatted="$(
+    printf '%s' "$message" | format_reply telegram "artifact://daily-maintenance" 2>/dev/null \
+      || printf '%s' "$message"
+  )"
   docker exec "$CONTAINER" openclaw --profile "$PROFILE" message send \
-    --channel telegram --target "$ALERT_TARGET" --message "$message" >/dev/null 2>&1 || true
+    --channel telegram --target "$ALERT_TARGET" --message "$formatted" >/dev/null 2>&1 || true
 }
 
 container_exists() {

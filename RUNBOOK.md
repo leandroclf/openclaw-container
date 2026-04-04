@@ -180,10 +180,13 @@ npm view openclaw dist-tags --json
 `beta` can be newer than `latest`; this setup intentionally follows `latest`
 for stability.
 
-### 12.1) Efficiency upgrades from 2026.3.24
+### 12.1) Efficiency upgrades from 2026.4.2
+- Treat Task Flow and child-task metadata as first-class. Every new wave should record a parent task, child tasks, and a replay key when it fans out.
+- Keep the session/replay source metadata on every inbound request. That is what lets Telegram, Slack, Discord, WhatsApp, cron, and board inputs collapse into one canonical packet.
+- Use `before_agent_reply` to normalize outbound replies before they leave the system. That keeps approval messages and operational alerts consistent across channels.
+- Keep `openclaw doctor --fix` in the update path. It now closes the most common config/layout drift before health checks run.
 - Use `/v1/models` and `/v1/embeddings` when integrating tools that expect OpenAI-compatible discovery or embedding endpoints.
-- Treat the new "Available Right Now" tool visibility in the Control UI as the fastest way to decide whether to ask the agent for code, research, or a different specialist.
-- Keep the stale `google-gemini-cli-auth` entry out of `openclaw.json` and the example config; the release removes it and logs a warning when it is left behind.
+- Treat the Control UI tool visibility as the fastest way to decide whether to ask the agent for code, research, or a different specialist.
 
 Policy note:
 - This environment stays Docker-only. Do not install or rely on a host-side OpenClaw CLI for privileged operations; keep access centralized in the container and use `docker exec`, compose, or container-managed scripts.

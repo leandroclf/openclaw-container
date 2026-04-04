@@ -35,3 +35,5 @@ Operational notes:
 - `scripts/telegram_channel_bridge.py` is the Telegram polling bridge that
   mirrors channel activity into the canonical intake path and keeps the
   omnichannel source contract intact.
+- `scripts/before_agent_reply.py` is the outbound guardrail hook for
+  Telegram/Slack/Discord/WhatsApp formatting and approval messages.

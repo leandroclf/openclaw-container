@@ -78,6 +78,18 @@ SOURCE_FIELD_ALIASES = {
     "threadId": "sessionKey",
     "chatId": "sessionKey",
     "conversationId": "sessionKey",
+    "sessionReplay": "sessionReplayKey",
+    "sessionReplayKey": "sessionReplayKey",
+    "session_replay_key": "sessionReplayKey",
+    "replay": "replayKey",
+    "replayKey": "replayKey",
+    "replay_key": "replayKey",
+    "flowId": "flowId",
+    "flow_id": "flowId",
+    "flowStep": "flowStep",
+    "flow_step": "flowStep",
+    "parent_task_id": "parentTaskId",
+    "child_task_ids": "childTaskIds",
     "messageId": "messageRef",
     "updateId": "messageRef",
     "postId": "messageRef",
@@ -85,6 +97,14 @@ SOURCE_FIELD_ALIASES = {
     "dedup": "dedupKey",
     "dedup_key": "dedupKey",
     "idempotencyKey": "dedupKey",
+}
+FLOW_FIELD_ALIASES = {
+    "flow_id": "flowId",
+    "flow_step": "flowStep",
+    "session_replay_key": "sessionReplayKey",
+    "replay_key": "replayKey",
+    "parent_task_id": "parentTaskId",
+    "child_task_ids": "childTaskIds",
 }
 
 
@@ -277,6 +297,10 @@ def compute_source_dedup_key(source: dict[str, Any], *, dedup_seed: dict[str, An
         "channel",
         "sessionKey",
         "messageRef",
+        "sessionReplayKey",
+        "replayKey",
+        "flowId",
+        "flowStep",
         "issueId",
         "workflow",
         "kind",
@@ -352,6 +376,56 @@ def normalize_source_metadata(
     return normalized
 
 
+def normalize_flow_metadata(source: dict[str, Any], flow: dict[str, Any] | None = None) -> dict[str, Any] | None:
+    normalized: dict[str, Any] = {}
+    if isinstance(flow, dict):
+        normalized.update(flow)
+    elif isinstance(source.get("flow"), dict):
+        normalized.update(source["flow"])
+
+    for alias, canonical in FLOW_FIELD_ALIASES.items():
+        if canonical not in normalized and alias in normalized:
+            normalized[canonical] = normalized[alias]
+
+    if "flowId" not in normalized:
+        flow_id = first_nonempty(
+            normalized.get("flowId"),
+            source.get("flowId"),
+            source.get("sessionReplayKey"),
+            source.get("replayKey"),
+            source.get("parentTaskId"),
+            source.get("sessionKey"),
+        )
+        if flow_id is not None:
+            normalized["flowId"] = str(flow_id).strip()
+
+    if "parentTaskId" not in normalized and has_content(source.get("parentTaskId")):
+        normalized["parentTaskId"] = str(source["parentTaskId"]).strip()
+
+    if "sessionReplayKey" not in normalized:
+        session_replay_key = first_nonempty(source.get("sessionReplayKey"), source.get("sessionKey"))
+        if session_replay_key is not None:
+            normalized["sessionReplayKey"] = str(session_replay_key).strip()
+
+    if "replayKey" not in normalized:
+        replay_key = first_nonempty(source.get("replayKey"), source.get("dedupKey"))
+        if replay_key is not None:
+            normalized["replayKey"] = str(replay_key).strip()
+
+    if "flowStep" not in normalized and has_content(source.get("flowStep")):
+        normalized["flowStep"] = str(source["flowStep"]).strip()
+
+    child_task_ids = normalized.get("childTaskIds")
+    if child_task_ids is None and isinstance(source.get("childTaskIds"), list):
+        child_task_ids = source["childTaskIds"]
+    if child_task_ids is not None:
+        normalized["childTaskIds"] = [str(item).strip() for item in child_task_ids if has_content(item)]
+
+    if not normalized:
+        return None
+    return normalized
+
+
 def read_schema(name: str) -> dict[str, Any]:
     return load_json(SCHEMAS_DIR / name)
 
@@ -414,6 +488,16 @@ def validate_task(task: dict[str, Any]) -> None:
     )
     source = task["source"]
     _require(source, ["channel", "sessionKey", "messageRef", "dedupKey"], "source.")
+    if "flow" in task:
+        flow = task["flow"]
+        if not isinstance(flow, dict):
+            raise ValidationError("flow must be an object")
+        if "flowId" in flow and not isinstance(flow["flowId"], str):
+            raise ValidationError("flow.flowId must be a string")
+        if "parentTaskId" in flow and not isinstance(flow["parentTaskId"], str):
+            raise ValidationError("flow.parentTaskId must be a string")
+        if "childTaskIds" in flow and not isinstance(flow["childTaskIds"], list):
+            raise ValidationError("flow.childTaskIds must be a list")
     if task["executionMode"] not in {"AUTO", "HUMAN"}:
         raise ValidationError("executionMode must be AUTO or HUMAN")
     if task["priority"] not in {"low", "medium", "high", "critical"}:
@@ -545,6 +629,10 @@ def default_task(
             "workspaceRoot": (source or {}).get("workspaceRoot"),
             "parentTaskId": (source or {}).get("parentTaskId"),
             "role": (source or {}).get("role"),
+            "flowId": (source or {}).get("flowId"),
+            "flowStep": (source or {}).get("flowStep"),
+            "sessionReplayKey": (source or {}).get("sessionReplayKey"),
+            "replayKey": (source or {}).get("replayKey"),
         },
     )
     task = {
@@ -578,6 +666,9 @@ def default_task(
         },
         "timestamps": {"createdAt": created_at, "updatedAt": created_at},
     }
+    flow = normalize_flow_metadata(normalized_source)
+    if flow is not None:
+        task["flow"] = flow
     if preflight:
         task["preflight"] = preflight
     if issue_id:
@@ -853,6 +944,9 @@ def enqueue_task(conn: sqlite3.Connection, task: dict[str, Any]) -> dict[str, An
     _upsert_task(conn, task)
     _persist_task_snapshot(task)
     emit_event(conn, event_type="task.created", task=task, payload={"status": "queued"})
+    parent_task_id = task.get("source", {}).get("parentTaskId")
+    if has_content(parent_task_id):
+        link_child_task(conn, parent_task_id=str(parent_task_id), child_task=task)
     conn.commit()
     return task
 
@@ -873,6 +967,78 @@ def find_task_by_source_dedup_key(conn: sqlite3.Connection, dedup_key: str) -> d
         if task.get("source", {}).get("dedupKey") == dedup_key:
             return task
     return None
+
+
+def link_child_task(
+    conn: sqlite3.Connection,
+    *,
+    parent_task_id: str,
+    child_task: dict[str, Any],
+) -> None:
+    parent = get_task(conn, parent_task_id)
+    if parent is None:
+        return
+
+    flow = dict(parent.get("flow") or {})
+    child_source = child_task.get("source", {}) if isinstance(child_task.get("source"), dict) else {}
+    child_flow = child_task.get("flow", {}) if isinstance(child_task.get("flow"), dict) else {}
+    if not flow:
+        flow = {
+            "flowId": parent.get("source", {}).get("flowId")
+            or parent.get("source", {}).get("sessionReplayKey")
+            or parent.get("source", {}).get("replayKey")
+            or parent["taskId"],
+        }
+    if not has_content(flow.get("flowId")):
+        flow["flowId"] = parent.get("source", {}).get("flowId") or parent["taskId"]
+    child_ids = list(flow.get("childTaskIds") or [])
+    if child_task["taskId"] not in child_ids:
+        child_ids.append(child_task["taskId"])
+    flow["childTaskIds"] = child_ids
+    if has_content(child_task.get("source", {}).get("sessionReplayKey")) and not flow.get("sessionReplayKey"):
+        flow["sessionReplayKey"] = child_task["source"]["sessionReplayKey"]
+    if has_content(child_flow.get("sessionReplayKey")) and not flow.get("sessionReplayKey"):
+        flow["sessionReplayKey"] = child_flow["sessionReplayKey"]
+    if has_content(child_source.get("sessionReplayKey")) and not flow.get("sessionReplayKey"):
+        flow["sessionReplayKey"] = child_source["sessionReplayKey"]
+    if has_content(child_task.get("source", {}).get("replayKey")) and not flow.get("replayKey"):
+        flow["replayKey"] = child_task["source"]["replayKey"]
+    if has_content(child_flow.get("replayKey")) and not flow.get("replayKey"):
+        flow["replayKey"] = child_flow["replayKey"]
+    if has_content(child_source.get("replayKey")) and not flow.get("replayKey"):
+        flow["replayKey"] = child_source["replayKey"]
+    if has_content(child_flow.get("flowStep")) and not flow.get("flowStep"):
+        flow["flowStep"] = child_flow["flowStep"]
+    if has_content(child_source.get("flowStep")) and not flow.get("flowStep"):
+        flow["flowStep"] = child_source["flowStep"]
+
+    parent["flow"] = flow
+    parent_source = dict(parent.get("source") or {})
+    parent_source["childTaskIds"] = child_ids
+    if not has_content(parent_source.get("flowId")):
+        parent_source["flowId"] = flow["flowId"]
+    if not has_content(parent_source.get("sessionReplayKey")) and has_content(flow.get("sessionReplayKey")):
+        parent_source["sessionReplayKey"] = flow["sessionReplayKey"]
+    if not has_content(parent_source.get("replayKey")) and has_content(flow.get("replayKey")):
+        parent_source["replayKey"] = flow["replayKey"]
+    if not has_content(parent_source.get("flowStep")) and has_content(flow.get("flowStep")):
+        parent_source["flowStep"] = flow["flowStep"]
+    parent["source"] = parent_source
+    parent["timestamps"]["updatedAt"] = now_iso()
+    _upsert_task(conn, parent)
+    _persist_task_snapshot(parent)
+    emit_event(
+        conn,
+        event_type="task.progress",
+        task=parent,
+        payload={
+            "action": "child_task_linked",
+            "childTaskId": child_task["taskId"],
+            "parentTaskId": parent_task_id,
+            "flowId": flow["flowId"],
+        },
+        role="supervisor",
+    )
 
 
 def list_tasks(conn: sqlite3.Connection, status: str | None = None) -> list[dict[str, Any]]:
@@ -1349,6 +1515,15 @@ def build_intake_task(
         "boardSection",
         "workspaceRoot",
         "parentTaskId",
+        "flow",
+        "flowId",
+        "flow_id",
+        "flowStep",
+        "flow_step",
+        "sessionReplayKey",
+        "session_replay_key",
+        "replayKey",
+        "replay_key",
         "role",
         "owner",
         "boardTitle",
@@ -1504,14 +1679,40 @@ def render_delivery_handoff_md(request: dict[str, Any]) -> str:
         f"- sessionKey: `{source.get('sessionKey', 'n/a')}`",
         f"- messageRef: `{source.get('messageRef', 'n/a')}`",
         f"- dedupKey: `{source.get('dedupKey', 'n/a')}`",
+        f"- sessionReplayKey: `{source.get('sessionReplayKey', 'n/a')}`",
+        f"- replayKey: `{source.get('replayKey', 'n/a')}`",
+        f"- flowId: `{source.get('flowId', 'n/a')}`",
+        f"- flowStep: `{source.get('flowStep', 'n/a')}`",
+        f"- parentTaskId: `{source.get('parentTaskId', 'n/a')}`",
         "",
-        "## Routing",
-        f"- requestedAgent: `{request['routing'].get('requestedAgent', 'n/a')}`",
-        f"- effectiveAgent: `{request['routing'].get('effectiveAgent', 'n/a')}`",
-        f"- reason: {request['routing'].get('reason', 'n/a')}",
-        "",
-        "## Acceptance",
     ]
+    flow = request["task"].get("flow")
+    if isinstance(flow, dict):
+        lines.extend(
+            [
+                "## Task Flow",
+                f"- flowId: `{flow.get('flowId', 'n/a')}`",
+                f"- parentTaskId: `{flow.get('parentTaskId', 'n/a')}`",
+                f"- sessionReplayKey: `{flow.get('sessionReplayKey', 'n/a')}`",
+                f"- replayKey: `{flow.get('replayKey', 'n/a')}`",
+                f"- flowStep: `{flow.get('flowStep', 'n/a')}`",
+            ]
+        )
+        child_task_ids = flow.get("childTaskIds", [])
+        if child_task_ids:
+            lines.append("- childTaskIds:")
+            lines.extend(f"  - `{child_task_id}`" for child_task_id in child_task_ids)
+        lines.append("")
+    lines.extend(
+        [
+            "## Routing",
+            f"- requestedAgent: `{request['routing'].get('requestedAgent', 'n/a')}`",
+            f"- effectiveAgent: `{request['routing'].get('effectiveAgent', 'n/a')}`",
+            f"- reason: {request['routing'].get('reason', 'n/a')}",
+            "",
+            "## Acceptance",
+        ]
+    )
     required = request["task"].get("acceptance", {}).get("required", [])
     if required:
         lines.extend(f"- `{item}`" for item in required)
@@ -2030,7 +2231,14 @@ def run_registered_workflow(
         workflow=workflow_name,
         execution_mode="AUTO",
         priority=spec.get("priority", "low"),
-        source={"channel": "workflow", "workspaceRoot": str(workspace_root)},
+        source={
+            "channel": "workflow",
+            "workspaceRoot": str(workspace_root),
+            "flowId": workflow_name,
+            "flowStep": "workflow-run",
+            "sessionReplayKey": f"workflow:{workflow_name}:{workspace_root}",
+            "replayKey": f"workflow:{workflow_name}",
+        },
         routing=routing,
         acceptance={
             "required": list(spec.get("acceptanceRequired", [])),

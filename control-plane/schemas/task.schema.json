@@ -39,7 +39,31 @@
         "messageRef": { "type": "string" },
         "messageId": { "type": "string", "description": "Legacy alias for messageRef" },
         "dedupKey": { "type": "string" },
+        "sessionReplayKey": { "type": "string" },
+        "replayKey": { "type": "string" },
+        "flowId": { "type": "string" },
+        "flowStep": { "type": "string" },
+        "parentTaskId": { "type": "string" },
+        "childTaskIds": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
         "userId": { "type": ["string", "integer"] }
+      },
+      "additionalProperties": true
+    },
+    "flow": {
+      "type": "object",
+      "properties": {
+        "flowId": { "type": "string" },
+        "parentTaskId": { "type": "string" },
+        "childTaskIds": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "sessionReplayKey": { "type": "string" },
+        "replayKey": { "type": "string" },
+        "flowStep": { "type": "string" }
       },
       "additionalProperties": true
     },

@@ -5,10 +5,13 @@ running OpenClaw 24/7 inside WSL (Ubuntu-24.04).
 
 ## Quick start
 
-### What the 2026.3.24 release adds for this stack
-- `/v1/models` and `/v1/embeddings` are now exposed, so external tools that expect OpenAI-compatible discovery or embedding endpoints can integrate more cleanly.
-- `/tools` and the Control UI now show what the current agent can actually use right now, which makes it easier to pick the right capability before starting work.
-- Media/file dispatch and update preflights are safer, which reduces surprise breakage during automation and upgrades.
+### What the 2026.4.2 release adds for this stack
+- Task Flow now has durable state and child-task support, which matches the way this workspace already coordinates waves and follow-up work.
+- Session/replay surfaces and source metadata are first-class, which helps keep Telegram, Slack, Discord, WhatsApp, cron, and board requests tied to the same canonical packet.
+- `before_agent_reply` is the new guardrail hook for outbound replies, so format rules can stay consistent across channels.
+- `openclaw doctor --fix` is now part of the update path and fixes legacy config/layout drift before the health check runs.
+- Cron allowlists and channel-specific approval formatting are safer, which reduces surprise breakage during automation and upgrades.
+- `/v1/models`, `/v1/embeddings`, and the Control UI tool visibility remain available, so external tools can still integrate cleanly.
 
 This host keeps OpenClaw Docker-only by policy. Use the containerized CLI and `docker exec`/compose workflows for all privileged operations.
 The control-plane jobs default to `~/openclaw-workspace` as the active host workspace and, when Docker is temporarily unavailable, they continue the local snapshot/workflow steps while logging a clear warning instead of aborting the whole cycle.
@@ -63,7 +66,7 @@ docker exec openclaw openclaw --profile prod browser --browser-profile openclaw-
 ```
 If `create-profile` returns "already exists", continue with the next command.
 Keep profile `chrome` only for optional manual extension takeover.
-`scripts/update.sh` now checks whether `openclaw-auto` already exists before trying to create it, so routine updates stay quieter.
+`scripts/update.sh` now checks whether `openclaw-auto` already exists before trying to create it, and it runs `openclaw doctor --fix` before the final validation/health pass, so routine updates stay quieter and safer.
 
 ## Secrets
 - Use `~/openclaw/.env` for all secrets.
@@ -122,6 +125,7 @@ For strict production change guardrails and parallel deployment, see:
 - `./scripts/agentos.py` Agent OS control-plane primitives (queue, events, intake, preflight, scheduler, Telegram envelope)
 - `./scripts/channel_intake_bridge.py` normalize external channel JSON into the canonical intake path
 - `./scripts/telegram_channel_bridge.py` poll Telegram channel logs and feed inbound updates into the canonical intake path
+- `./scripts/before_agent_reply.py` normalize outbound replies and alerts before they leave OpenClaw
 - `control-plane/scripts/*.sh` thin wrappers for Agent OS DB init, schema validation, preflight, supervisor cycle, and autonomy snapshots; the autonomy snapshot now emits a ranked top-5 action queue, tracks board-issue changes and packet coverage, and prefers repo-recovery when yellow/stale signals are present
 - `control-plane/config/workflow_registry.json` low-risk workflow registry for Green rollout
 - `control-plane/scripts/run_workflow.sh` execute one registered low-risk workflow via Agent OS

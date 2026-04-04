@@ -178,6 +178,51 @@ class AgentOSTestCase(unittest.TestCase):
         self.assertEqual(result["task"]["source"]["messageRef"], "slack-msg-9")
         self.assertEqual(agentos.list_tasks(self.conn), [])
 
+    def test_intake_event_links_flow_metadata_and_child_task_ids(self) -> None:
+        parent = agentos.enqueue_task(self.conn, self._make_task())
+        parent_flow_before = dict(parent["flow"])
+        payload = {
+            "source": {
+                "channel": "telegram",
+                "sessionId": "tg:chat-77",
+                "messageId": "msg-77",
+                "parentTaskId": parent["taskId"],
+                "flowId": "flow-77",
+                "flowStep": "step-2",
+                "sessionReplayKey": "tg:chat-77:msg-77",
+                "replayKey": "telegram:reply-77",
+            },
+            "title": "Child task",
+            "kind": "planning",
+            "workflow": "operate-and-grow",
+            "executionMode": "AUTO",
+            "priority": "medium",
+        }
+
+        result = agentos.ingest_channel_event(self.conn, payload)
+        self.assertEqual(result["status"], "queued")
+        child = result["task"]
+        self.assertEqual(child["source"]["parentTaskId"], parent["taskId"])
+        self.assertEqual(child["source"]["flowId"], "flow-77")
+        self.assertEqual(child["source"]["sessionReplayKey"], "tg:chat-77:msg-77")
+        self.assertEqual(child["source"]["replayKey"], "telegram:reply-77")
+        self.assertIn("flow", child)
+        self.assertEqual(child["flow"]["parentTaskId"], parent["taskId"])
+        self.assertEqual(child["flow"]["flowId"], "flow-77")
+        self.assertNotIn("childTaskIds", child["flow"])
+
+        parent_after = agentos.get_task(self.conn, parent["taskId"])
+        self.assertIsNotNone(parent_after)
+        assert parent_after is not None
+        self.assertIn(child["taskId"], parent_after["flow"]["childTaskIds"])
+        self.assertTrue(parent_after["flow"]["flowId"])
+        self.assertEqual(parent_after["flow"]["sessionReplayKey"], parent_flow_before["sessionReplayKey"])
+        self.assertEqual(parent_after["flow"]["replayKey"], parent_flow_before["replayKey"])
+        self.assertEqual(parent_after["flow"]["flowStep"], "step-2")
+        self.assertEqual(parent_after["source"]["sessionReplayKey"], parent_flow_before["sessionReplayKey"])
+        self.assertEqual(parent_after["source"]["replayKey"], parent_flow_before["replayKey"])
+        self.assertEqual(parent_after["source"]["flowStep"], "step-2")
+
     def test_routing_plan_links_to_model_router(self) -> None:
         plan = agentos.resolve_routing_plan(
             kind="code_impl",

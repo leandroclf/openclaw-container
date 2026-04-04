@@ -97,6 +97,9 @@
         },
         "session-memory": {
           "enabled": true
+        },
+        "before-agent-reply": {
+          "enabled": true
         }
       }
     }

@@ -5,6 +5,7 @@ CONTRATO DE ENTRADA:
 - Se o arquivo não existir, registrar `HARD_BLOCKER` em `ops/multiagent/delivery/daily-summary.md` e parar.
 - Usar apenas o `issueId`, `repo`, `branch`, `kind`, `workflow`, `acceptance` e a origem canônica do handoff.
 - Tratar `source.channel`, `source.sessionKey`, `source.messageRef` e `source.dedupKey` como metadados obrigatórios de rastreabilidade.
+- Se o handoff trouxer `source.sessionReplayKey`, `source.replayKey` ou `source.flowId`, preservá-los no resultado e na evidência.
 - Não selecionar itens adicionais do kanban neste ciclo.
 
 REGRAS OBRIGATÓRIAS:
