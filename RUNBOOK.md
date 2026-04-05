@@ -149,6 +149,12 @@ Canonical local drop-in path for a finance export:
 ```bash
 ~/openclaw/data/finance/ledger.csv
 ```
+If you do not know the source path yet, ask the discovery helper:
+```bash
+./scripts/finance_export_discovery.py --human
+```
+You can extend the discovery scan with `OPENCLAW_LEDGER_EXPORT_SEARCH_PATHS` if
+the export lives outside the default local roots.
 When you have the real export, wire it in with:
 ```bash
 ~/openclaw-container/scripts/install_finance_export_dropin.sh /path/to/real-ledger-export.csv
@@ -158,6 +164,9 @@ export appears, changes, or disappears. It remembers the last fingerprint in:
 ```bash
 ~/openclaw/runtime/agentos/ledger-export-watchdog.json
 ```
+The watchdog also stores discovery suggestions for likely finance export paths
+so the dashboard can surface a recommended source while the canonical export is
+still missing.
 Installed schedules:
 - `*/15 * * * *` healthcheck + optional Telegram alert.
 - `0 3 * * 0` weekly backup.

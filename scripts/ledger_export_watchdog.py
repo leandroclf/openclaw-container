@@ -17,6 +17,7 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from scripts import before_agent_reply
+from scripts import finance_export_discovery
 
 
 DEFAULT_CANONICAL_LEDGER = Path.home() / "openclaw" / "data" / "finance" / "ledger.csv"
@@ -75,6 +76,10 @@ def snapshot_ledger_export(path: Path) -> dict[str, Any]:
         }
     )
     return snapshot
+
+
+def discover_ledger_export_candidates() -> dict[str, Any]:
+    return finance_export_discovery.discover_finance_exports()
 
 
 def classify_change(previous: dict[str, Any], current: dict[str, Any]) -> str:
@@ -211,6 +216,7 @@ def run_watchdog(
     current = snapshot_ledger_export(ledger_export)
     change_type = classify_change(previous, current)
     change_detected = change_type in {"appeared", "updated", "disappeared"}
+    discovery = discover_ledger_export_candidates()
 
     alert_result: dict[str, Any] = {"sent": False, "reason": "stable"}
     if change_detected and not dry_run:
@@ -238,6 +244,7 @@ def run_watchdog(
             "lastChangeType": change_type,
             "lastChangeAt": current["observedAt"] if change_detected or not previous else previous.get("lastChangeAt"),
             "lastAlertAt": current["observedAt"] if alert_result.get("sent") else previous.get("lastAlertAt"),
+            "discovery": discovery,
         }
         persist_state(state_file, persisted)
 
@@ -245,6 +252,7 @@ def run_watchdog(
         "status": "change_detected" if change_detected else "stable",
         "changeType": change_type,
         "ledgerExport": current,
+        "discovery": discovery,
         "previousState": previous,
         "alert": alert_result,
         "stateFile": str(state_file),

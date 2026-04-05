@@ -92,6 +92,52 @@ class LedgerExportWatchdogTestCase(unittest.TestCase):
         self.assertEqual(persisted["lastChangeType"], "appeared")
         self.assertTrue(report["alert"]["sent"])
 
+    def test_run_watchdog_persists_discovery_candidates_when_missing(self) -> None:
+        fake_discovery = {
+            "observedAt": "2026-04-05T00:00:00+00:00",
+            "searchRoots": ["/tmp/search"],
+            "candidateCount": 1,
+            "candidates": [
+                {
+                    "path": "/tmp/search/finance/ledger.csv",
+                    "score": 99,
+                    "reasons": ["supported format .csv", "name matches ledger"],
+                    "size": 12,
+                    "mtime": "2026-04-05T00:00:00+00:00",
+                    "mtimeEpoch": 1_744_000_000.0,
+                    "suffix": ".csv",
+                }
+            ],
+            "recommendedSource": {
+                "path": "/tmp/search/finance/ledger.csv",
+                "score": 99,
+                "reasons": ["supported format .csv", "name matches ledger"],
+                "size": 12,
+                "mtime": "2026-04-05T00:00:00+00:00",
+                "mtimeEpoch": 1_744_000_000.0,
+                "suffix": ".csv",
+            },
+        }
+        with mock.patch.object(
+            ledger_export_watchdog.finance_export_discovery,
+            "discover_finance_exports",
+            return_value=fake_discovery,
+        ):
+            report = ledger_export_watchdog.run_watchdog(
+                ledger_export=self.ledger_path,
+                state_file=self.state_file,
+                alert_target="",
+                container="openclaw",
+                profile="prod",
+                dry_run=False,
+            )
+
+        self.assertEqual(report["changeType"], "initial_missing")
+        self.assertEqual(report["discovery"]["recommendedSource"]["path"], "/tmp/search/finance/ledger.csv")
+        persisted = json.loads(self.state_file.read_text(encoding="utf-8"))
+        self.assertIn("discovery", persisted)
+        self.assertEqual(persisted["discovery"]["recommendedSource"]["path"], "/tmp/search/finance/ledger.csv")
+
 
 if __name__ == "__main__":
     unittest.main()
