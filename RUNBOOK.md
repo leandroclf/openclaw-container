@@ -153,8 +153,9 @@ If you do not know the source path yet, ask the discovery helper:
 ```bash
 ./scripts/finance_export_discovery.py --human
 ```
-You can extend the discovery scan with `OPENCLAW_LEDGER_EXPORT_SEARCH_PATHS` if
-the export lives outside the default local roots.
+The discovery helper now scans a wider set of local workspaces and Windows user
+profile roots by default. You can still extend the scan with
+`OPENCLAW_LEDGER_EXPORT_SEARCH_PATHS` if the export lives somewhere else.
 When you have the real export, wire it in with:
 ```bash
 ~/openclaw-container/scripts/install_finance_export_dropin.sh /path/to/real-ledger-export.csv

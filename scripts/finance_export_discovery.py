@@ -24,12 +24,26 @@ DEFAULT_SEARCH_ROOTS = (
     Path.home() / "Finance",
     Path.home() / "clawd",
     Path.home() / "openclaw-workspace",
+    Path.home() / "Projects",
+    Path.home() / "Workspace",
+    Path.home() / "Work",
+    Path.home() / "repos",
+    Path.home() / "src",
+    Path.home() / "code",
+    Path.home() / "dev",
     Path("/mnt/c/Users") / Path.home().name / "Downloads",
     Path("/mnt/c/Users") / Path.home().name / "Documents",
     Path("/mnt/c/Users") / Path.home().name / "Desktop",
     Path("/mnt/c/Users") / Path.home().name / "OneDrive",
     Path("/mnt/c/Users") / Path.home().name / "OneDrive" / "Documents",
     Path("/mnt/c/Users") / Path.home().name / "OneDrive" / "Downloads",
+    Path("/mnt/c/Users") / Path.home().name / "Projects",
+    Path("/mnt/c/Users") / Path.home().name / "Workspace",
+    Path("/mnt/c/Users") / Path.home().name / "Work",
+    Path("/mnt/c/Users") / Path.home().name / "repos",
+    Path("/mnt/c/Users") / Path.home().name / "src",
+    Path("/mnt/c/Users") / Path.home().name / "code",
+    Path("/mnt/c/Users") / Path.home().name / "dev",
     Path("/mnt/c/Users") / "Public" / "Downloads",
 )
 SUPPORTED_SUFFIXES = {".csv", ".tsv", ".json", ".ndjson", ".csv.gz", ".tsv.gz"}
@@ -154,7 +168,7 @@ def score_candidate(path: Path, *, stat_result: os.stat_result, now: datetime) -
 def discover_finance_exports(
     search_roots: Iterable[str | Path] | None = None,
     *,
-    max_depth: int = 2,
+    max_depth: int = 3,
     limit: int = 8,
 ) -> dict[str, Any]:
     roots = parse_search_roots(search_roots)
