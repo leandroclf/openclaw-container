@@ -39,5 +39,6 @@ Operational notes:
   omnichannel source contract intact.
 - `tools/weekly_blocker_capture_workflow.py` is the weekly finance/legal capture wrapper that commits and pushes the dated snapshots.
 - `scripts/ledger_export_watchdog.py` is the ledger export presence watchdog that alerts when the canonical finance export appears, changes, or disappears.
+- `scripts/install_finance_export_dropin.sh` is the drop-in installer for wiring a real export into the canonical finance path.
 - `scripts/before_agent_reply.py` is the outbound guardrail hook for
   Telegram/Slack/Discord/WhatsApp formatting and approval messages.

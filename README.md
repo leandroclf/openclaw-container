@@ -133,6 +133,7 @@ For strict production change guardrails and parallel deployment, see:
 - `control-plane/scripts/run_workflow.sh` execute one registered low-risk workflow via Agent OS
 - Canonical local drop-in path for a finance export: `~/openclaw/data/finance/ledger.csv` (or set `OPENCLAW_LEDGER_EXPORT_PATH`)
 - `scripts/ledger_export_watchdog.py` watch the canonical finance export and alert on appearance/change/disappearance
+- `scripts/install_finance_export_dropin.sh` link or copy a real finance export into the canonical drop-in path
 - `./scripts/test_gate.sh` run unit/regression tests (add
   `--with-integration` for container guardrail checks)
 
@@ -166,4 +167,5 @@ See `CHECKLIST.md`.
 - `./scripts/healthcheck_notify.sh` will send a Telegram alert if
   `ALERT_TELEGRAM_TARGET` is set.
 - `./scripts/ledger_export_watchdog.py` will alert when the canonical finance export appears, changes, or disappears.
+- `./scripts/install_finance_export_dropin.sh /path/to/real-ledger-export.csv` will wire a real export into the canonical finance path.
 - See `cron/cron.example` for sample scheduling.

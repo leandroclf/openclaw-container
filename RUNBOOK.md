@@ -149,6 +149,10 @@ Canonical local drop-in path for a finance export:
 ```bash
 ~/openclaw/data/finance/ledger.csv
 ```
+When you have the real export, wire it in with:
+```bash
+~/openclaw-container/scripts/install_finance_export_dropin.sh /path/to/real-ledger-export.csv
+```
 The ledger export watchdog runs on cron and alerts Telegram when the canonical
 export appears, changes, or disappears. It remembers the last fingerprint in:
 ```bash
