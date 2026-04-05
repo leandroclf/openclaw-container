@@ -137,7 +137,12 @@ def build_report(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--max-depth", type=int, default=3, help="Discovery depth for local finance export search.")
+    parser.add_argument(
+        "--max-depth",
+        type=int,
+        default=finance_export_discovery.resolve_default_max_depth(),
+        help="Discovery depth for local finance export search.",
+    )
     parser.add_argument("--limit", type=int, default=8, help="Maximum number of discovered candidates to retain.")
     parser.add_argument("--dry-run", action="store_true", help="Only discover and report; do not wire or publish.")
     parser.add_argument("--state-file", default=str(STATE_FILE), help="Runtime state file for the autowire snapshot.")

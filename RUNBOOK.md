@@ -155,6 +155,7 @@ If you do not know the source path yet, ask the discovery helper:
 ```bash
 ./scripts/finance_export_discovery.py --human
 ```
+Use `OPENCLAW_LEDGER_EXPORT_MAX_DEPTH` if the export lives under a deeper folder tree than the default search.
 The discovery helper now scans a wider set of local workspaces and Windows user
 profile roots by default. You can still extend the scan with
 `OPENCLAW_LEDGER_EXPORT_SEARCH_PATHS` if the export lives somewhere else.

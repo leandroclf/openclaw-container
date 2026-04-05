@@ -134,7 +134,7 @@ For strict production change guardrails and parallel deployment, see:
 - `control-plane/scripts/install_prod_finance_export_autowire_cron.sh` install the finance-export autowire cron block
 - `control-plane/scripts/run_workflow.sh` execute one registered low-risk workflow via Agent OS
 - Canonical local drop-in path for a finance export: `~/openclaw/data/finance/ledger.csv` (or set `OPENCLAW_LEDGER_EXPORT_PATH`)
-- `scripts/finance_export_discovery.py` suggests likely finance export sources from local files when the canonical export is still missing; it now scans common workspaces and Windows user profile roots by default, and you can still extend the scan with `OPENCLAW_LEDGER_EXPORT_SEARCH_PATHS`
+- `scripts/finance_export_discovery.py` suggests likely finance export sources from local files when the canonical export is still missing; it now scans common workspaces and Windows user profile roots by default, and you can still extend the scan with `OPENCLAW_LEDGER_EXPORT_SEARCH_PATHS` or widen depth with `OPENCLAW_LEDGER_EXPORT_MAX_DEPTH`
 - `scripts/ledger_export_watchdog.py` watch the canonical finance export and alert on appearance/change/disappearance
 - `scripts/finance_export_autowire.py` discover a real finance export, wire it into the canonical path, and rerun the weekly capture when a source is found
 - `scripts/install_finance_export_dropin.sh` link or copy a real finance export into the canonical drop-in path; when no source is passed it prints the best local suggestion

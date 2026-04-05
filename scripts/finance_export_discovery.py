@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 DEFAULT_CANONICAL_LEDGER = Path.home() / "openclaw" / "data" / "finance" / "ledger.csv"
+DEFAULT_MAX_DEPTH = 5
 DEFAULT_SEARCH_ROOTS = (
     Path.home() / "openclaw" / "data" / "finance",
     Path.home() / "openclaw" / "data",
@@ -91,6 +92,17 @@ def parse_search_roots(extra_roots: Iterable[str | Path] | None = None) -> list[
     return roots
 
 
+def resolve_default_max_depth() -> int:
+    raw = os.getenv("OPENCLAW_LEDGER_EXPORT_MAX_DEPTH", "").strip()
+    if not raw:
+        return DEFAULT_MAX_DEPTH
+    try:
+        value = int(raw)
+    except ValueError:
+        return DEFAULT_MAX_DEPTH
+    return max(1, value)
+
+
 def normalize_suffix(path: Path) -> str:
     suffix = "".join(path.suffixes).lower()
     if suffix:
@@ -168,9 +180,11 @@ def score_candidate(path: Path, *, stat_result: os.stat_result, now: datetime) -
 def discover_finance_exports(
     search_roots: Iterable[str | Path] | None = None,
     *,
-    max_depth: int = 3,
+    max_depth: int | None = None,
     limit: int = 8,
 ) -> dict[str, Any]:
+    if max_depth is None:
+        max_depth = resolve_default_max_depth()
     roots = parse_search_roots(search_roots)
     now = datetime.now(timezone.utc)
     seen: set[str] = set()
@@ -266,7 +280,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", action="append", dest="roots", help="Extra search root (repeatable).")
     parser.add_argument("--limit", type=int, default=8)
-    parser.add_argument("--max-depth", type=int, default=2)
+    parser.add_argument("--max-depth", type=int, default=resolve_default_max_depth())
     parser.add_argument("--human", action="store_true", help="Render a human-readable summary.")
     return parser
 
