@@ -145,6 +145,10 @@ cd ~/openclaw-container
 ./control-plane/scripts/install_prod_weekly_blocker_capture_cron.sh
 crontab -l
 ```
+Canonical local drop-in path for a finance export:
+```bash
+~/openclaw/data/finance/ledger.csv
+```
 Installed schedules:
 - `*/15 * * * *` healthcheck + optional Telegram alert.
 - `0 3 * * 0` weekly backup.
