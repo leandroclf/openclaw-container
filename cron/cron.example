@@ -119,6 +119,14 @@
 # 15 7 * * 0 flock -n /home/leandro/openclaw/runtime/agentos/prod-weekly-blocker-capture.lock /home/leandro/openclaw-container/control-plane/scripts/run_workflow.sh --db /home/leandro/openclaw/runtime/agentos/prod-observe.db --name weekly_blocker_capture --workspace-root /home/leandro/openclaw-workspace >> /home/leandro/openclaw/logs/agentos-prod-weekly-blocker-capture.log 2>&1
 # === /OpenClaw Agent OS Weekly finance/legal capture ===
 
+# Optional Agent OS finance export autowire block.
+# Discovers likely finance exports, wires the canonical drop-in when a real
+# export exists, and republishes the weekly capture.
+#
+# === OpenClaw Agent OS Finance export autowire ===
+# 5,35 * * * * flock -n /home/leandro/openclaw/runtime/agentos/prod-finance-export-autowire.lock /home/leandro/openclaw-container/control-plane/scripts/run_workflow.sh --db /home/leandro/openclaw/runtime/agentos/prod-observe.db --name finance_export_autowire --workspace-root /home/leandro/openclaw-workspace >> /home/leandro/openclaw/logs/agentos-prod-finance-export-autowire.log 2>&1
+# === /OpenClaw Agent OS Finance export autowire ===
+
 # Optional Agent OS ledger export watchdog block.
 # Watches the canonical finance export path and alerts when it appears,
 # changes, or disappears.

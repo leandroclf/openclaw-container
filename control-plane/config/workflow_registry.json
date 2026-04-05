@@ -1,5 +1,5 @@
 {
-  "version": "2026-04-05.2",
+  "version": "2026-04-05.3",
   "workflows": {
     "daily_ops_state_lint": {
       "kind": "ops_watchdog",
@@ -161,6 +161,27 @@
       ],
       "retryable": false,
       "leaseSeconds": 120
+    },
+    "finance_export_autowire": {
+      "kind": "ops_watchdog",
+      "title": "Finance export autowire",
+      "priority": "low",
+      "command": [
+        "python3",
+        "/home/leandro/openclaw-container/scripts/finance_export_autowire.py"
+      ],
+      "acceptanceRequired": [
+        "report",
+        "command"
+      ],
+      "evidenceRefs": [
+        "ops/multiagent/delivery/weekly-capture-runbook.md",
+        "ops/multiagent/delivery/ledger-export-watchdog.md",
+        "README.md",
+        "RUNBOOK.md"
+      ],
+      "retryable": false,
+      "leaseSeconds": 300
     },
     "daily_summary_rotation": {
       "kind": "daily_summary",

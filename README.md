@@ -127,13 +127,16 @@ For strict production change guardrails and parallel deployment, see:
 - `./scripts/telegram_channel_bridge.py` poll Telegram channel logs and feed inbound updates into the canonical intake path
 - `./scripts/before_agent_reply.py` normalize outbound replies and alerts before they leave OpenClaw
 - `tools/weekly_blocker_capture_workflow.py` run the weekly finance/legal capture and commit/push the resulting snapshots
+- `scripts/finance_export_autowire.py` discover a real finance export, wire the canonical drop-in, and republish the capture when a source appears
 - `control-plane/scripts/*.sh` thin wrappers for Agent OS DB init, schema validation, preflight, supervisor cycle, and autonomy snapshots; the autonomy snapshot now emits a ranked top-5 action queue, tracks board-issue changes and packet coverage, and prefers repo-recovery when yellow/stale signals are present
 - `control-plane/config/workflow_registry.json` low-risk workflow registry for Green rollout
 - `control-plane/scripts/install_prod_weekly_blocker_capture_cron.sh` install the weekly finance/legal capture cron block
+- `control-plane/scripts/install_prod_finance_export_autowire_cron.sh` install the finance-export autowire cron block
 - `control-plane/scripts/run_workflow.sh` execute one registered low-risk workflow via Agent OS
 - Canonical local drop-in path for a finance export: `~/openclaw/data/finance/ledger.csv` (or set `OPENCLAW_LEDGER_EXPORT_PATH`)
 - `scripts/finance_export_discovery.py` suggests likely finance export sources from local files when the canonical export is still missing; it now scans common workspaces and Windows user profile roots by default, and you can still extend the scan with `OPENCLAW_LEDGER_EXPORT_SEARCH_PATHS`
 - `scripts/ledger_export_watchdog.py` watch the canonical finance export and alert on appearance/change/disappearance
+- `scripts/finance_export_autowire.py` discover a real finance export, wire it into the canonical path, and rerun the weekly capture when a source is found
 - `scripts/install_finance_export_dropin.sh` link or copy a real finance export into the canonical drop-in path; when no source is passed it prints the best local suggestion
 - `./scripts/test_gate.sh` run unit/regression tests (add
   `--with-integration` for container guardrail checks)
@@ -168,6 +171,7 @@ See `CHECKLIST.md`.
 - `./scripts/healthcheck_notify.sh` will send a Telegram alert if
   `ALERT_TELEGRAM_TARGET` is set.
 - `./scripts/ledger_export_watchdog.py` will alert when the canonical finance export appears, changes, or disappears.
+- `./scripts/finance_export_autowire.py` will discover a real finance export, wire the canonical drop-in, and rerun the weekly capture when a source is found.
 - `./scripts/finance_export_discovery.py --human` will print the best local finance export suggestion, if one exists.
 - `./scripts/install_finance_export_dropin.sh /path/to/real-ledger-export.csv` will wire a real export into the canonical finance path.
 - See `cron/cron.example` for sample scheduling.

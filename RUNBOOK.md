@@ -12,6 +12,7 @@ reproduced on another machine with the same behavior.
 - Telegram channel enabled with pairing + allowlist.
 - Telegram intake is mirrored into Agent OS via `./scripts/telegram_channel_bridge.py`, which polls Telegram logs and forwards inbound updates into the canonical intake queue.
 - Daily auto-update to stable (`openclaw@latest`) via cron.
+- Finance export autowire runs by cron too: it discovers likely finance exports, wires the canonical drop-in path, and republishes the weekly finance/legal capture when a source appears.
 
 ## 2) Host prerequisites
 - Ubuntu 24.04 on WSL2.
@@ -142,6 +143,7 @@ Install cron block:
 ```bash
 cd ~/openclaw-container
 ./scripts/install_cron.sh
+./control-plane/scripts/install_prod_finance_export_autowire_cron.sh
 ./control-plane/scripts/install_prod_weekly_blocker_capture_cron.sh
 crontab -l
 ```
@@ -165,6 +167,9 @@ export appears, changes, or disappears. It remembers the last fingerprint in:
 ```bash
 ~/openclaw/runtime/agentos/ledger-export-watchdog.json
 ```
+The finance export autowire runs on cron as well. When it discovers a real
+source, it wires the canonical drop-in path and reruns the weekly capture so the
+finance baseline is published without manual intervention.
 The watchdog also stores discovery suggestions for likely finance export paths
 so the dashboard can surface a recommended source while the canonical export is
 still missing.
@@ -177,6 +182,7 @@ Installed schedules:
 - `5 20 * * *` model routing for off-hours (`cost_optimized`).
 - `15 4 * * *` log pruning/compression.
 - `*/30 * * * *` ledger export watchdog that alerts on canonical export appearance/change/disappearance.
+- `5,35 * * * *` finance export autowire that discovers, wires, and republishes the finance baseline when a real export is found.
 - `17,47 * * * *` observe cycle refreshes CI, repo progress, and autonomy snapshots. The snapshot now surfaces a top-5 next-action queue, board-issue changes, packet coverage, and the ISSUE-007 CI gate progress; it should favor repo-recovery whenever yellow/stale signals appear.
 - `15 7 * * 0` weekly finance/legal capture, which runs the weekly blocker workflow and commits/pushes the dated snapshots when they change.
 

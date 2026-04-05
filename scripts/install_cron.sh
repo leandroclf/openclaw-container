@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OPENCLAW_HOME="${OPENCLAW_HOME:-$HOME/openclaw}"
 ALERTS_FILE="${ALERTS_FILE:-$OPENCLAW_HOME/config/alerts.env}"
+PROD_AGENTOS_DB="${PROD_AGENTOS_DB:-$OPENCLAW_HOME/runtime/agentos/prod-observe.db}"
+PROD_WORKSPACE_ROOT="${PROD_WORKSPACE_ROOT:-$HOME/openclaw-workspace}"
 
 HEALTH_SCHEDULE="${HEALTH_SCHEDULE:-*/15 * * * *}"
 DAILY_MAINTENANCE_SCHEDULE="${DAILY_MAINTENANCE_SCHEDULE:-10 6 * * *}"
@@ -19,6 +21,9 @@ PRUNE_LOGS_SCHEDULE="${PRUNE_LOGS_SCHEDULE:-15 4 * * *}"
 PROD_LEDGER_EXPORT_WATCHDOG_SCHEDULE="${PROD_LEDGER_EXPORT_WATCHDOG_SCHEDULE:-*/30 * * * *}"
 PROD_LEDGER_EXPORT_WATCHDOG_LOCK="${PROD_LEDGER_EXPORT_WATCHDOG_LOCK:-$OPENCLAW_HOME/runtime/agentos/prod-ledger-export-watchdog.lock}"
 PROD_LEDGER_EXPORT_WATCHDOG_LOG="${PROD_LEDGER_EXPORT_WATCHDOG_LOG:-$OPENCLAW_HOME/logs/agentos-prod-ledger-export-watchdog.log}"
+PROD_FINANCE_EXPORT_AUTOWIRE_SCHEDULE="${PROD_FINANCE_EXPORT_AUTOWIRE_SCHEDULE:-5,35 * * * *}"
+PROD_FINANCE_EXPORT_AUTOWIRE_LOCK="${PROD_FINANCE_EXPORT_AUTOWIRE_LOCK:-$OPENCLAW_HOME/runtime/agentos/prod-finance-export-autowire.lock}"
+PROD_FINANCE_EXPORT_AUTOWIRE_LOG="${PROD_FINANCE_EXPORT_AUTOWIRE_LOG:-$OPENCLAW_HOME/logs/agentos-prod-finance-export-autowire.log}"
 PROD_OBSERVE_SCHEDULE="${PROD_OBSERVE_SCHEDULE:-17,47 * * * *}"
 PROD_POLICY_AUDIT_SCHEDULE="${PROD_POLICY_AUDIT_SCHEDULE:-19,49 * * * *}"
 PROD_AUTOPILOT_SLA_SCHEDULE="${PROD_AUTOPILOT_SLA_SCHEDULE:-45 22 * * *}"
@@ -51,6 +56,7 @@ fi
 
 sed -i '/^# === OpenClaw container ops ===$/,/^# === \/OpenClaw container ops ===$/d' "$tmp"
 sed -i '/^# === OpenClaw Agent OS Ledger export watchdog ===$/,/^# === \/OpenClaw Agent OS Ledger export watchdog ===$/d' "$tmp"
+sed -i '/^# === OpenClaw Agent OS Finance export autowire ===$/,/^# === \/OpenClaw Agent OS Finance export autowire ===$/d' "$tmp"
 sed -i '/^# === OpenClaw Agent OS Prod observe ===$/,/^# === \/OpenClaw Agent OS Prod observe ===$/d' "$tmp"
 sed -i '/^# === OpenClaw Agent OS Prod policy audit ===$/,/^# === \/OpenClaw Agent OS Prod policy audit ===$/d' "$tmp"
 sed -i '/^# === OpenClaw Agent OS Prod autopilot SLA ===$/,/^# === \/OpenClaw Agent OS Prod autopilot SLA ===$/d' "$tmp"
@@ -77,6 +83,9 @@ $PRUNE_LOGS_SCHEDULE $ROOT_DIR/scripts/prune_logs.sh >> $OPENCLAW_HOME/logs/prun
 # === OpenClaw Agent OS Ledger export watchdog ===
 $PROD_LEDGER_EXPORT_WATCHDOG_SCHEDULE flock -n $PROD_LEDGER_EXPORT_WATCHDOG_LOCK bash -lc '. "$ALERTS_FILE" && "$ROOT_DIR/scripts/ledger_export_watchdog.py"' >> $PROD_LEDGER_EXPORT_WATCHDOG_LOG 2>&1
 # === /OpenClaw Agent OS Ledger export watchdog ===
+# === OpenClaw Agent OS Finance export autowire ===
+$PROD_FINANCE_EXPORT_AUTOWIRE_SCHEDULE flock -n $PROD_FINANCE_EXPORT_AUTOWIRE_LOCK $ROOT_DIR/control-plane/scripts/run_workflow.sh --db $PROD_AGENTOS_DB --name finance_export_autowire --workspace-root $PROD_WORKSPACE_ROOT >> $PROD_FINANCE_EXPORT_AUTOWIRE_LOG 2>&1
+# === /OpenClaw Agent OS Finance export autowire ===
 # === OpenClaw Agent OS Prod observe ===
 $PROD_OBSERVE_SCHEDULE flock -n $OPENCLAW_HOME/runtime/agentos/prod-observe.lock $ROOT_DIR/control-plane/scripts/prod_observe_cycle.sh >> $OPENCLAW_HOME/logs/agentos-prod-observe.log 2>&1
 # === /OpenClaw Agent OS Prod observe ===

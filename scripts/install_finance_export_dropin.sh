@@ -44,11 +44,25 @@ fi
 mkdir -p "$CANONICAL_DIR"
 chmod 700 "$CANONICAL_DIR"
 
-if ln -sfn "$SOURCE" "$CANONICAL_FILE" 2>/dev/null; then
-  echo "Linked canonical finance export to: $SOURCE"
+SOURCE_REAL="$(python3 - "$SOURCE" "$CANONICAL_FILE" <<'PY'
+import sys
+from pathlib import Path
+
+source = Path(sys.argv[1]).expanduser().resolve(strict=False)
+target = Path(sys.argv[2]).expanduser().resolve(strict=False)
+print("same" if source == target else "different")
+PY
+)"
+
+if [ "$SOURCE_REAL" = "same" ]; then
+  echo "Canonical finance export already points to: $SOURCE"
 else
-  cp -f "$SOURCE" "$CANONICAL_FILE"
-  echo "Copied canonical finance export to: $CANONICAL_FILE"
+  if ln -sfn "$SOURCE" "$CANONICAL_FILE" 2>/dev/null; then
+    echo "Linked canonical finance export to: $SOURCE"
+  else
+    cp -f "$SOURCE" "$CANONICAL_FILE"
+    echo "Copied canonical finance export to: $CANONICAL_FILE"
+  fi
 fi
 
 if [ -x "$ROOT_DIR/scripts/ledger_export_watchdog.py" ]; then

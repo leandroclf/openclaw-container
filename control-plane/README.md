@@ -18,6 +18,7 @@ Contents:
   - Includes `channel_intake_bridge.py` for webhook/channel adapters that need the same intake path.
   - Includes `telegram_channel_bridge.py` for polling Telegram channel logs into the same intake path.
   - Includes `weekly_blocker_capture_workflow.py` for the weekly finance/legal capture flow.
+  - Includes `finance_export_autowire.py` for finance-export discovery, drop-in wiring, and capture publication when a real export appears.
   - Includes `finance_export_discovery.py` for local source suggestions when the canonical export is missing; the default search now covers common workspaces and Windows user profile roots, and it can still be extended with `OPENCLAW_LEDGER_EXPORT_SEARCH_PATHS`.
   - Includes `ledger_export_watchdog.py` for ledger export presence/change alerts.
   - Includes `run_workflow.sh` for low-risk workflow execution via Agent OS.
@@ -39,6 +40,7 @@ Operational notes:
   mirrors channel activity into the canonical intake path and keeps the
   omnichannel source contract intact.
 - `tools/weekly_blocker_capture_workflow.py` is the weekly finance/legal capture wrapper that commits and pushes the dated snapshots.
+- `scripts/finance_export_autowire.py` is the auto-wiring workflow that discovers a real finance export, connects the canonical drop-in, and republishes the weekly capture when a source is found.
 - `scripts/ledger_export_watchdog.py` is the ledger export presence watchdog that alerts when the canonical finance export appears, changes, or disappears.
 - `scripts/finance_export_discovery.py` is the helper that suggests likely local export sources so the team can wire the canonical drop-in path faster.
 - `scripts/install_finance_export_dropin.sh` is the drop-in installer for wiring a real export into the canonical finance path.
