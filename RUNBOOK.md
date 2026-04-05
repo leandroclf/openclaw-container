@@ -12,7 +12,7 @@ reproduced on another machine with the same behavior.
 - Telegram channel enabled with pairing + allowlist.
 - Telegram intake is mirrored into Agent OS via `./scripts/telegram_channel_bridge.py`, which polls Telegram logs and forwards inbound updates into the canonical intake queue.
 - Daily auto-update to stable (`openclaw@latest`) via cron.
-- Finance export autowire runs by cron too: it discovers likely finance exports, wires the canonical drop-in path, and republishes the weekly finance/legal capture when a source appears.
+- Finance export autowire runs by cron too: it discovers likely finance exports, wires the canonical drop-in path, and republishes the weekly finance/legal capture when a source appears. When the source is a workbook (`.xlsx` / `.xlsm`), the drop-in helper converts it into the canonical `ledger.csv`.
 
 ## 2) Host prerequisites
 - Ubuntu 24.04 on WSL2.
@@ -156,13 +156,16 @@ If you do not know the source path yet, ask the discovery helper:
 ./scripts/finance_export_discovery.py --human
 ```
 Use `OPENCLAW_LEDGER_EXPORT_MAX_DEPTH` if the export lives under a deeper folder tree than the default search.
-The discovery helper now scans a wider set of local workspaces and Windows user
-profile roots by default. You can still extend the scan with
-`OPENCLAW_LEDGER_EXPORT_SEARCH_PATHS` if the export lives somewhere else.
+The discovery helper now scans a wider set of local workspaces, Windows user
+profile roots, and `OneDrive`-style finance folders by default. You can still
+extend the scan with `OPENCLAW_LEDGER_EXPORT_SEARCH_PATHS` if the export lives
+somewhere else.
 When you have the real export, wire it in with:
 ```bash
 ~/openclaw-container/scripts/install_finance_export_dropin.sh /path/to/real-ledger-export.csv
 ```
+If the source is a workbook, pass the `.xlsx` / `.xlsm` path and the helper
+will convert it into the canonical CSV ledger first.
 The ledger export watchdog runs on cron and alerts Telegram when the canonical
 export appears, changes, or disappears. It remembers the last fingerprint in:
 ```bash

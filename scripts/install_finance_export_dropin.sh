@@ -57,12 +57,22 @@ PY
 if [ "$SOURCE_REAL" = "same" ]; then
   echo "Canonical finance export already points to: $SOURCE"
 else
-  if ln -sfn "$SOURCE" "$CANONICAL_FILE" 2>/dev/null; then
-    echo "Linked canonical finance export to: $SOURCE"
-  else
-    cp -f "$SOURCE" "$CANONICAL_FILE"
-    echo "Copied canonical finance export to: $CANONICAL_FILE"
-  fi
+  SOURCE_SUFFIX="${SOURCE##*.}"
+  SOURCE_SUFFIX=".${SOURCE_SUFFIX,,}"
+  case "$SOURCE_SUFFIX" in
+    .xlsx|.xlsm)
+      python3 "$ROOT_DIR/scripts/finance_xlsx_to_csv.py" "$SOURCE" "$CANONICAL_FILE"
+      echo "Converted XLSX finance export to canonical CSV: $CANONICAL_FILE"
+      ;;
+    *)
+      if ln -sfn "$SOURCE" "$CANONICAL_FILE" 2>/dev/null; then
+        echo "Linked canonical finance export to: $SOURCE"
+      else
+        cp -f "$SOURCE" "$CANONICAL_FILE"
+        echo "Copied canonical finance export to: $CANONICAL_FILE"
+      fi
+      ;;
+  esac
 fi
 
 if [ -x "$ROOT_DIR/scripts/ledger_export_watchdog.py" ]; then

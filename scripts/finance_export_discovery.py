@@ -46,8 +46,14 @@ DEFAULT_SEARCH_ROOTS = (
     Path("/mnt/c/Users") / Path.home().name / "code",
     Path("/mnt/c/Users") / Path.home().name / "dev",
     Path("/mnt/c/Users") / "Public" / "Downloads",
+    Path("/mnt/d/OneDrive"),
+    Path("/mnt/d/OneDrive") / "Documents",
+    Path("/mnt/d/OneDrive") / "Downloads",
+    Path("/mnt/d/OneDrive") / "Financeiro",
+    Path("/mnt/d/OneDrive") / "YukZ Tech",
+    Path("/mnt/d/OneDrive") / "YukZ Tech" / "Financeiro",
 )
-SUPPORTED_SUFFIXES = {".csv", ".tsv", ".json", ".ndjson", ".csv.gz", ".tsv.gz"}
+SUPPORTED_SUFFIXES = {".csv", ".tsv", ".json", ".ndjson", ".csv.gz", ".tsv.gz", ".xlsx", ".xlsm"}
 NAME_KEYWORDS = ("ledger", "finance", "revenue", "billing", "stripe", "bookkeeping", "cashflow", "transactions")
 PATH_KEYWORDS = ("finance", "billing", "accounting", "ledger", "revenue", "bookkeeping", "cashflow")
 SKIP_DIRS = {
