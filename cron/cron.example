@@ -118,3 +118,11 @@
 # === OpenClaw Agent OS Weekly finance/legal capture ===
 # 15 7 * * 0 flock -n /home/leandro/openclaw/runtime/agentos/prod-weekly-blocker-capture.lock /home/leandro/openclaw-container/control-plane/scripts/run_workflow.sh --db /home/leandro/openclaw/runtime/agentos/prod-observe.db --name weekly_blocker_capture --workspace-root /home/leandro/openclaw-workspace >> /home/leandro/openclaw/logs/agentos-prod-weekly-blocker-capture.log 2>&1
 # === /OpenClaw Agent OS Weekly finance/legal capture ===
+
+# Optional Agent OS ledger export watchdog block.
+# Watches the canonical finance export path and alerts when it appears,
+# changes, or disappears.
+#
+# === OpenClaw Agent OS Ledger export watchdog ===
+# */30 * * * * flock -n /home/leandro/openclaw/runtime/agentos/prod-ledger-export-watchdog.lock bash -lc '. /home/leandro/openclaw/config/alerts.env && /home/leandro/openclaw-container/scripts/ledger_export_watchdog.py' >> /home/leandro/openclaw/logs/agentos-prod-ledger-export-watchdog.log 2>&1
+# === /OpenClaw Agent OS Ledger export watchdog ===

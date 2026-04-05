@@ -149,6 +149,11 @@ Canonical local drop-in path for a finance export:
 ```bash
 ~/openclaw/data/finance/ledger.csv
 ```
+The ledger export watchdog runs on cron and alerts Telegram when the canonical
+export appears, changes, or disappears. It remembers the last fingerprint in:
+```bash
+~/openclaw/runtime/agentos/ledger-export-watchdog.json
+```
 Installed schedules:
 - `*/15 * * * *` healthcheck + optional Telegram alert.
 - `0 3 * * 0` weekly backup.
@@ -157,6 +162,7 @@ Installed schedules:
 - `5 8 * * 1-5` model routing for business hours (`balanced_default`).
 - `5 20 * * *` model routing for off-hours (`cost_optimized`).
 - `15 4 * * *` log pruning/compression.
+- `*/30 * * * *` ledger export watchdog that alerts on canonical export appearance/change/disappearance.
 - `17,47 * * * *` observe cycle refreshes CI, repo progress, and autonomy snapshots. The snapshot now surfaces a top-5 next-action queue, board-issue changes, packet coverage, and the ISSUE-007 CI gate progress; it should favor repo-recovery whenever yellow/stale signals appear.
 - `15 7 * * 0` weekly finance/legal capture, which runs the weekly blocker workflow and commits/pushes the dated snapshots when they change.
 

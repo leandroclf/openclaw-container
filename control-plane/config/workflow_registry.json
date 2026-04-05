@@ -1,5 +1,5 @@
 {
-  "version": "2026-04-05.1",
+  "version": "2026-04-05.2",
   "workflows": {
     "daily_ops_state_lint": {
       "kind": "ops_watchdog",
@@ -141,6 +141,26 @@
       ],
       "retryable": false,
       "leaseSeconds": 300
+    },
+    "ledger_export_watchdog": {
+      "kind": "ops_watchdog",
+      "title": "Ledger export watchdog",
+      "priority": "low",
+      "command": [
+        "python3",
+        "/home/leandro/openclaw-container/scripts/ledger_export_watchdog.py"
+      ],
+      "acceptanceRequired": [
+        "report",
+        "command"
+      ],
+      "evidenceRefs": [
+        "ops/multiagent/delivery/ledger-export-watchdog.md",
+        "README.md",
+        "RUNBOOK.md"
+      ],
+      "retryable": false,
+      "leaseSeconds": 120
     },
     "daily_summary_rotation": {
       "kind": "daily_summary",

@@ -16,6 +16,9 @@ MODEL_ROUTER_BUSINESS_OBJECTIVE="${MODEL_ROUTER_BUSINESS_OBJECTIVE:-balanced_def
 MODEL_ROUTER_OFFHOURS_SCHEDULE="${MODEL_ROUTER_OFFHOURS_SCHEDULE:-5 20 * * *}"
 MODEL_ROUTER_OFFHOURS_OBJECTIVE="${MODEL_ROUTER_OFFHOURS_OBJECTIVE:-cost_optimized}"
 PRUNE_LOGS_SCHEDULE="${PRUNE_LOGS_SCHEDULE:-15 4 * * *}"
+PROD_LEDGER_EXPORT_WATCHDOG_SCHEDULE="${PROD_LEDGER_EXPORT_WATCHDOG_SCHEDULE:-*/30 * * * *}"
+PROD_LEDGER_EXPORT_WATCHDOG_LOCK="${PROD_LEDGER_EXPORT_WATCHDOG_LOCK:-$OPENCLAW_HOME/runtime/agentos/prod-ledger-export-watchdog.lock}"
+PROD_LEDGER_EXPORT_WATCHDOG_LOG="${PROD_LEDGER_EXPORT_WATCHDOG_LOG:-$OPENCLAW_HOME/logs/agentos-prod-ledger-export-watchdog.log}"
 PROD_OBSERVE_SCHEDULE="${PROD_OBSERVE_SCHEDULE:-17,47 * * * *}"
 PROD_POLICY_AUDIT_SCHEDULE="${PROD_POLICY_AUDIT_SCHEDULE:-19,49 * * * *}"
 PROD_AUTOPILOT_SLA_SCHEDULE="${PROD_AUTOPILOT_SLA_SCHEDULE:-45 22 * * *}"
@@ -31,7 +34,7 @@ PROD_DELIVERY_EXECUTION_SCHEDULE="${PROD_DELIVERY_EXECUTION_SCHEDULE:-19,49 * * 
 PROD_DELIVERY_RECONCILE_SCHEDULE="${PROD_DELIVERY_RECONCILE_SCHEDULE:-21,51 * * * *}"
 SEQUENTIAL_DELIVERY_CRON_ID="${SEQUENTIAL_DELIVERY_CRON_ID:-e6d5079d-3eaa-46fa-ac4a-4f77add89b18}"
 
-mkdir -p "$OPENCLAW_HOME/config" "$OPENCLAW_HOME/logs"
+mkdir -p "$OPENCLAW_HOME/config" "$OPENCLAW_HOME/logs" "$OPENCLAW_HOME/runtime/agentos"
 
 if [ ! -f "$ALERTS_FILE" ]; then
   cat > "$ALERTS_FILE" <<'EOF'
@@ -47,6 +50,7 @@ if ! crontab -l > "$tmp" 2>/dev/null; then
 fi
 
 sed -i '/^# === OpenClaw container ops ===$/,/^# === \/OpenClaw container ops ===$/d' "$tmp"
+sed -i '/^# === OpenClaw Agent OS Ledger export watchdog ===$/,/^# === \/OpenClaw Agent OS Ledger export watchdog ===$/d' "$tmp"
 sed -i '/^# === OpenClaw Agent OS Prod observe ===$/,/^# === \/OpenClaw Agent OS Prod observe ===$/d' "$tmp"
 sed -i '/^# === OpenClaw Agent OS Prod policy audit ===$/,/^# === \/OpenClaw Agent OS Prod policy audit ===$/d' "$tmp"
 sed -i '/^# === OpenClaw Agent OS Prod autopilot SLA ===$/,/^# === \/OpenClaw Agent OS Prod autopilot SLA ===$/d' "$tmp"
@@ -70,6 +74,9 @@ $MODEL_ROUTER_BUSINESS_SCHEDULE $ROOT_DIR/scripts/model_router.py --objective $M
 $MODEL_ROUTER_OFFHOURS_SCHEDULE $ROOT_DIR/scripts/model_router.py --objective $MODEL_ROUTER_OFFHOURS_OBJECTIVE --probe --apply >> $OPENCLAW_HOME/logs/model-router.log 2>&1
 $PRUNE_LOGS_SCHEDULE $ROOT_DIR/scripts/prune_logs.sh >> $OPENCLAW_HOME/logs/prune.log 2>&1
 # === /OpenClaw container ops ===
+# === OpenClaw Agent OS Ledger export watchdog ===
+$PROD_LEDGER_EXPORT_WATCHDOG_SCHEDULE flock -n $PROD_LEDGER_EXPORT_WATCHDOG_LOCK bash -lc '. "$ALERTS_FILE" && "$ROOT_DIR/scripts/ledger_export_watchdog.py"' >> $PROD_LEDGER_EXPORT_WATCHDOG_LOG 2>&1
+# === /OpenClaw Agent OS Ledger export watchdog ===
 # === OpenClaw Agent OS Prod observe ===
 $PROD_OBSERVE_SCHEDULE flock -n $OPENCLAW_HOME/runtime/agentos/prod-observe.lock $ROOT_DIR/control-plane/scripts/prod_observe_cycle.sh >> $OPENCLAW_HOME/logs/agentos-prod-observe.log 2>&1
 # === /OpenClaw Agent OS Prod observe ===

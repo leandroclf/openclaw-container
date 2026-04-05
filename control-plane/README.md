@@ -18,6 +18,7 @@ Contents:
   - Includes `channel_intake_bridge.py` for webhook/channel adapters that need the same intake path.
   - Includes `telegram_channel_bridge.py` for polling Telegram channel logs into the same intake path.
   - Includes `weekly_blocker_capture_workflow.py` for the weekly finance/legal capture flow.
+  - Includes `ledger_export_watchdog.py` for ledger export presence/change alerts.
   - Includes `run_workflow.sh` for low-risk workflow execution via Agent OS.
 - `state/`
   - Local SQLite queue state (`agentos.db`) created at runtime.
@@ -37,5 +38,6 @@ Operational notes:
   mirrors channel activity into the canonical intake path and keeps the
   omnichannel source contract intact.
 - `tools/weekly_blocker_capture_workflow.py` is the weekly finance/legal capture wrapper that commits and pushes the dated snapshots.
+- `scripts/ledger_export_watchdog.py` is the ledger export presence watchdog that alerts when the canonical finance export appears, changes, or disappears.
 - `scripts/before_agent_reply.py` is the outbound guardrail hook for
   Telegram/Slack/Discord/WhatsApp formatting and approval messages.
