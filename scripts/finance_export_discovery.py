@@ -14,6 +14,9 @@ DEFAULT_SEARCH_ROOTS = (
     Path.home() / "openclaw" / "data" / "finance",
     Path.home() / "openclaw" / "data",
     Path.home() / "openclaw",
+    Path.home() / "OneDrive",
+    Path.home() / "OneDrive" / "Documents",
+    Path.home() / "OneDrive" / "Downloads",
     Path.home() / "Downloads",
     Path.home() / "Documents",
     Path.home() / "Desktop",
@@ -21,6 +24,13 @@ DEFAULT_SEARCH_ROOTS = (
     Path.home() / "Finance",
     Path.home() / "clawd",
     Path.home() / "openclaw-workspace",
+    Path("/mnt/c/Users") / Path.home().name / "Downloads",
+    Path("/mnt/c/Users") / Path.home().name / "Documents",
+    Path("/mnt/c/Users") / Path.home().name / "Desktop",
+    Path("/mnt/c/Users") / Path.home().name / "OneDrive",
+    Path("/mnt/c/Users") / Path.home().name / "OneDrive" / "Documents",
+    Path("/mnt/c/Users") / Path.home().name / "OneDrive" / "Downloads",
+    Path("/mnt/c/Users") / "Public" / "Downloads",
 )
 SUPPORTED_SUFFIXES = {".csv", ".tsv", ".json", ".ndjson", ".csv.gz", ".tsv.gz"}
 NAME_KEYWORDS = ("ledger", "finance", "revenue", "billing", "stripe", "bookkeeping", "cashflow", "transactions")
