@@ -126,8 +126,10 @@ For strict production change guardrails and parallel deployment, see:
 - `./scripts/channel_intake_bridge.py` normalize external channel JSON into the canonical intake path
 - `./scripts/telegram_channel_bridge.py` poll Telegram channel logs and feed inbound updates into the canonical intake path
 - `./scripts/before_agent_reply.py` normalize outbound replies and alerts before they leave OpenClaw
+- `tools/weekly_blocker_capture_workflow.py` run the weekly finance/legal capture and commit/push the resulting snapshots
 - `control-plane/scripts/*.sh` thin wrappers for Agent OS DB init, schema validation, preflight, supervisor cycle, and autonomy snapshots; the autonomy snapshot now emits a ranked top-5 action queue, tracks board-issue changes and packet coverage, and prefers repo-recovery when yellow/stale signals are present
 - `control-plane/config/workflow_registry.json` low-risk workflow registry for Green rollout
+- `control-plane/scripts/install_prod_weekly_blocker_capture_cron.sh` install the weekly finance/legal capture cron block
 - `control-plane/scripts/run_workflow.sh` execute one registered low-risk workflow via Agent OS
 - `./scripts/test_gate.sh` run unit/regression tests (add
   `--with-integration` for container guardrail checks)

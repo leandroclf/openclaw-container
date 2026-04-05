@@ -1,5 +1,5 @@
 {
-  "version": "2026-03-29.1",
+  "version": "2026-04-05.1",
   "workflows": {
     "daily_ops_state_lint": {
       "kind": "ops_watchdog",
@@ -120,6 +120,27 @@
       ],
       "retryable": false,
       "leaseSeconds": 120
+    },
+    "weekly_blocker_capture": {
+      "kind": "ops_watchdog",
+      "title": "Weekly finance/legal capture",
+      "priority": "low",
+      "command": [
+        "python3",
+        "tools/weekly_blocker_capture_workflow.py"
+      ],
+      "acceptanceRequired": [
+        "report",
+        "command"
+      ],
+      "evidenceRefs": [
+        "ops/multiagent/delivery/weekly-capture-runbook.md",
+        "ops/multiagent/delivery/issue-011-financial-baseline-weekly-pack-v1.md",
+        "ops/multiagent/delivery/issue-012-lgpd-source-matrix-v1.md",
+        "ops/multiagent/kpis/revenue.md"
+      ],
+      "retryable": false,
+      "leaseSeconds": 300
     },
     "daily_summary_rotation": {
       "kind": "daily_summary",

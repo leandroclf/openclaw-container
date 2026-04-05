@@ -142,6 +142,7 @@ Install cron block:
 ```bash
 cd ~/openclaw-container
 ./scripts/install_cron.sh
+./control-plane/scripts/install_prod_weekly_blocker_capture_cron.sh
 crontab -l
 ```
 Installed schedules:
@@ -153,6 +154,7 @@ Installed schedules:
 - `5 20 * * *` model routing for off-hours (`cost_optimized`).
 - `15 4 * * *` log pruning/compression.
 - `17,47 * * * *` observe cycle refreshes CI, repo progress, and autonomy snapshots. The snapshot now surfaces a top-5 next-action queue, board-issue changes, packet coverage, and the ISSUE-007 CI gate progress; it should favor repo-recovery whenever yellow/stale signals appear.
+- `15 7 * * 0` weekly finance/legal capture, which runs the weekly blocker workflow and commits/pushes the dated snapshots when they change.
 
 To avoid duplicated health routines between WSL cron and OpenClaw internal
 scheduler, disable the two internal health jobs once:
@@ -185,6 +187,7 @@ for stability.
 - Keep the session/replay source metadata on every inbound request. That is what lets Telegram, Slack, Discord, WhatsApp, cron, and board inputs collapse into one canonical packet.
 - Use `before_agent_reply` to normalize outbound replies before they leave the system. That keeps approval messages and operational alerts consistent across channels.
 - Keep `openclaw doctor --fix` in the update path. It now closes the most common config/layout drift before health checks run.
+- Use the weekly finance/legal capture workflow so ISSUE-011 and ISSUE-012 stay reproducible and auto-published.
 - Use `/v1/models` and `/v1/embeddings` when integrating tools that expect OpenAI-compatible discovery or embedding endpoints.
 - Treat the Control UI tool visibility as the fastest way to decide whether to ask the agent for code, research, or a different specialist.
 

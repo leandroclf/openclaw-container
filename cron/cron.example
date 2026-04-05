@@ -110,3 +110,11 @@
 # === OpenClaw Agent OS Prod delivery reconcile ===
 # 21,51 * * * * flock -n /home/leandro/openclaw/runtime/agentos/prod-delivery-reconcile.lock /home/leandro/openclaw-container/control-plane/scripts/prod_delivery_reconcile_cycle.sh >> /home/leandro/openclaw/logs/agentos-prod-delivery-reconcile.log 2>&1
 # === /OpenClaw Agent OS Prod delivery reconcile ===
+
+# Optional Agent OS weekly finance/legal capture block.
+# Runs the canonical weekly capture workflow and commits/pushes the weekly
+# finance/legal snapshots when they change.
+#
+# === OpenClaw Agent OS Weekly finance/legal capture ===
+# 15 7 * * 0 flock -n /home/leandro/openclaw/runtime/agentos/prod-weekly-blocker-capture.lock /home/leandro/openclaw-container/control-plane/scripts/run_workflow.sh --db /home/leandro/openclaw/runtime/agentos/prod-observe.db --name weekly_blocker_capture --workspace-root /home/leandro/openclaw-workspace >> /home/leandro/openclaw/logs/agentos-prod-weekly-blocker-capture.log 2>&1
+# === /OpenClaw Agent OS Weekly finance/legal capture ===
