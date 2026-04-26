@@ -3,6 +3,18 @@
 This repository contains the Docker image setup and operational guide for
 running OpenClaw 24/7 inside WSL (Ubuntu-24.04).
 
+## 🚀 NEW: Google Meet Integration (2026-04-26)
+
+OpenClaw can now automatically join and participate in Google Meet calls!
+
+**Quick Links**:
+- 📖 **[SETUP_INSTRUCTIONS.md](SETUP_INSTRUCTIONS.md)** - Complete setup guide with security hardening
+- 🎤 **[GOOGLE_MEET_SETUP.md](GOOGLE_MEET_SETUP.md)** - Step-by-step Google Meet integration
+- 🐍 **[scripts/meet-agent.py](scripts/meet-agent.py)** - Meet agent automation script
+- ✅ **[scripts/test-components.sh](scripts/test-components.sh)** - Test your configuration
+
+**Status**: ✅ Production Ready | **Tested**: OpenClaw 2026.4.23+
+
 ## Quick start
 
 ### What the 2026.4.24 release adds for this stack
