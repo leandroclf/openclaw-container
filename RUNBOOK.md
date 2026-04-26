@@ -55,6 +55,12 @@ docker images | rg openclaw-secure
 docker run --rm openclaw-secure --version
 docker run --rm openclaw-secure gateway --help
 ```
+If Docker rootless cannot pull or run images on this host because the UID/GID mapping is too narrow, use the rootless OCI bundle fallback instead:
+```bash
+cd ~/openclaw-container
+./scripts/update_runc_bundle.sh
+```
+This installs the latest stable release into a local bundle, validates `openclaw --version`, and avoids Docker layer extraction entirely.
 
 ## 6) Start hardened container
 ```bash
@@ -216,11 +222,13 @@ npm view openclaw dist-tags --json
 `beta` can be newer than `latest`; this setup intentionally follows `latest`
 for stability.
 
-### 12.1) Efficiency upgrades from 2026.4.2
+### 12.1) Efficiency upgrades from 2026.4.24
 - Treat Task Flow and child-task metadata as first-class. Every new wave should record a parent task, child tasks, and a replay key when it fans out.
 - Keep the session/replay source metadata on every inbound request. That is what lets Telegram, Slack, Discord, WhatsApp, cron, and board inputs collapse into one canonical packet.
 - Use `before_agent_reply` to normalize outbound replies before they leave the system. That keeps approval messages and operational alerts consistent across channels.
 - Keep `openclaw doctor --fix` in the update path. It now closes the most common config/layout drift before health checks run.
+- For the bundled `acpx` plugin, stay on the reduced schema: `permissionMode`, `nonInteractivePermissions`, `queueOwnerTtlSeconds`, plus the optional MCP bridge/timeout fields. Remove stale `command` / `expectedVersion` keys from older configs before rolling forward.
+- For Telegram, use `channels.telegram.streaming.mode` instead of the old scalar `streaming` value. The canonical nested form is what the current runtime validates cleanly.
 - Use the weekly finance/legal capture workflow so ISSUE-011 and ISSUE-012 stay reproducible and auto-published.
 - Use `/v1/models` and `/v1/embeddings` when integrating tools that expect OpenAI-compatible discovery or embedding endpoints.
 - Treat the Control UI tool visibility as the fastest way to decide whether to ask the agent for code, research, or a different specialist.

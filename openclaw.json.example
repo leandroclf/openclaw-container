@@ -112,7 +112,9 @@
       "allowFrom": [
         343551192
       ],
-      "streaming": "off",
+      "streaming": {
+        "mode": "off"
+      },
       "botToken": "${TELEGRAM_BOT_TOKEN}"
     }
   },

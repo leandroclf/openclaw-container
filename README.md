@@ -5,21 +5,27 @@ running OpenClaw 24/7 inside WSL (Ubuntu-24.04).
 
 ## Quick start
 
-### What the 2026.4.2 release adds for this stack
-- Task Flow now has durable state and child-task support, which matches the way this workspace already coordinates waves and follow-up work.
-- Session/replay surfaces and source metadata are first-class, which helps keep Telegram, Slack, Discord, WhatsApp, cron, and board requests tied to the same canonical packet.
-- `before_agent_reply` is the new guardrail hook for outbound replies, so format rules can stay consistent across channels.
-- `openclaw doctor --fix` is now part of the update path and fixes legacy config/layout drift before the health check runs.
-- Cron allowlists and channel-specific approval formatting are safer, which reduces surprise breakage during automation and upgrades.
-- `/v1/models`, `/v1/embeddings`, and the Control UI tool visibility remain available, so external tools can still integrate cleanly.
+### What the 2026.4.24 release adds for this stack
+- Google Meet is now a bundled participant plugin, with personal Google auth, Chrome/Twilio realtime sessions, paired-node Chrome support, attendance/artifact exports, and recovery tooling for already-open Meet tabs.
+- DeepSeek V4 Flash and V4 Pro are now in the bundled catalog, with V4 Flash as the onboarding default.
+- Talk, Voice Call, and Google Meet can use realtime voice loops, which makes live sessions more interactive and better for hands-on support.
+- Browser automation is more reliable: coordinate clicks, longer default action budgets, per-profile headless overrides, and steadier tab reuse/recovery are all in the release.
+- Startup is lighter because model catalogs are more static, provider rows are manifest-backed, provider dependencies are lazier, and packaged installs can repair missing runtime dependencies automatically.
+- The plugin SDK change that matters operationally: remove `api.registerEmbeddedExtensionFactory(...)` from bundled plugin logic and use `api.registerAgentToolResultMiddleware(...)` instead.
+- In this host, keep `openclaw doctor --fix` in the update path and let it migrate legacy layout drift. The current Telegram config should use `channels.telegram.streaming.mode` instead of the old scalar `streaming` value, and the bundled `acpx` plugin config now accepts only the smaller schema (`permissionMode`, `nonInteractivePermissions`, `queueOwnerTtlSeconds`, plus optional bridge/timeout fields).
 
-This host keeps OpenClaw Docker-only by policy. Use the containerized CLI and `docker exec`/compose workflows for all privileged operations.
+This host stays Docker-first by policy. Use the containerized CLI and `docker exec`/compose workflows when Docker is healthy, and only fall back to the rootless OCI bundle path when Docker layer extraction is blocked by host UID/GID mapping.
 The control-plane jobs default to `~/openclaw-workspace` as the active host workspace and, when Docker is temporarily unavailable, they continue the local snapshot/workflow steps while logging a clear warning instead of aborting the whole cycle.
 
 ### 1) Build the image (legacy builder only)
 ```bash
 DOCKER_BUILDKIT=0 docker build --build-arg OPENCLAW_VERSION=latest -t openclaw-secure:latest .
 ```
+If the host cannot pull base layers because rootless Docker lacks the needed UID/GID mapping, use the rootless OCI bundle fallback:
+```bash
+./scripts/update_runc_bundle.sh
+```
+That path validates the current stable release without depending on Docker image extraction.
 
 ### 2) Prepare folders
 ```bash
@@ -66,7 +72,7 @@ docker exec openclaw openclaw --profile prod browser --browser-profile openclaw-
 ```
 If `create-profile` returns "already exists", continue with the next command.
 Keep profile `chrome` only for optional manual extension takeover.
-`scripts/update.sh` now checks whether `openclaw-auto` already exists before trying to create it, and it runs `openclaw doctor --fix` before the final validation/health pass, so routine updates stay quieter and safer.
+`scripts/update.sh` now checks whether `openclaw-auto` already exists before trying to create it, and it runs `openclaw doctor --fix` before the final validation/health pass, so routine updates stay quieter and safer. The current stable release target is `2026.4.24`.
 
 ## Secrets
 - Use `~/openclaw/.env` for all secrets.
@@ -105,6 +111,7 @@ For strict production change guardrails and parallel deployment, see:
 
 ## Scripts
 - `./scripts/update.sh` build (latest stable) + restart + health
+- `./scripts/update_runc_bundle.sh` rootless OCI fallback when Docker image pulls are blocked by host UID/GID mapping
 - `./scripts/restart.sh` restart + health
 - `./scripts/sync_runtime_config.sh` copy `~/openclaw/data/openclaw.json` into
   the runtime state paths expected by current OpenClaw releases

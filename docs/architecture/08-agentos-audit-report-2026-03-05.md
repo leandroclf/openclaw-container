@@ -107,6 +107,8 @@ Evidence:
 }
 ```
 
+Historical snapshot: the current `acpx` schema is smaller in `2026.4.24` and no longer accepts `command` / `expectedVersion` in `plugins.entries.acpx.config`.
+
 Risk if FAIL:
 - n/a
 
@@ -624,4 +626,3 @@ Justification:
   - `./scripts/test_gate.sh`
   - preflight allow/deny manual checks
   - supervisor deny-path demo with persisted blocked event
-

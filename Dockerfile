@@ -1,4 +1,4 @@
-FROM node:22-bookworm
+FROM alpine:3.20
 
 # (opcional, mas recomendado pelo OpenClaw quando houver tretas com sharp/libvips)
 ENV SHARP_IGNORE_GLOBAL_LIBVIPS=1
@@ -7,29 +7,32 @@ ENV SHARP_IGNORE_GLOBAL_LIBVIPS=1
 ARG OPENCLAW_VERSION=latest
 ARG GEMINI_CLI_VERSION=latest
 
-# Dependências para o node-llama-cpp conseguir compilar o llama.cpp quando não houver binário compatível
-RUN apt-get update -o Acquire::Retries=3 -o Acquire::http::Timeout=30 \
- && apt-get install -y --no-install-recommends \
+# Dependências para o node-llama-cpp conseguir compilar o llama.cpp quando não houver binário compatível.
+# Alpine evita o conjunto extra de ownerships do bookworm que quebra o build rootless.
+RUN apk add --no-cache \
+    bash \
     ca-certificates \
     curl \
+    nodejs \
+    npm \
     git \
     gh \
     sudo \
     cmake \
-    build-essential \
+    build-base \
+    linux-headers \
     python3 \
-    python3.11-venv \
-    python-is-python3 \
     ripgrep \
-    pkg-config \
+    pkgconf \
     chromium \
-    fonts-liberation \
-    fonts-noto-color-emoji \
- && rm -rf /var/lib/apt/lists/*
+    libc6-compat \
+    gcompat \
+    ttf-liberation \
+    noto-fonts-emoji \
+ && update-ca-certificates
 
 # Permite elevação local para o usuário node quando necessário em tarefas do workspace.
-RUN usermod -aG sudo node \
- && echo "node ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/node \
+RUN echo "node ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/node \
  && chmod 440 /etc/sudoers.d/node
 
 # Instala o OpenClaw e Gemini CLI (necessário para OAuth do provider google-gemini-cli)
